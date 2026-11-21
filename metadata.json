@@ -1,0 +1,6 @@
+{
+  "name": "IAM AI",
+  "description": "Executive personal development, rhetoric mastery, international & legal certification roadmaps, and AI execution assistant in English and Uzbek.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

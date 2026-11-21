@@ -1,0 +1,346 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user profile and daily availability preferences. Contains PII and is strictly restricted to the owning user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 180
+        },
+        "locale": {
+          "type": "string",
+          "enum": ["en", "uz"]
+        },
+        "dailyHours": {
+          "type": "number"
+        },
+        "busyWindows": {
+          "type": "array"
+        },
+        "preferredStartTime": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "preferredEndTime": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email",
+        "locale",
+        "dailyHours",
+        "busyWindows",
+        "preferredStartTime",
+        "preferredEndTime",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Roadmap": {
+      "title": "Roadmap",
+      "description": "Adapted strategic roadmap assembled from an expert blueprint and Gemini delta patch.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "blueprintId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["rhetoric", "academic", "legal"]
+        },
+        "title": {
+          "type": "object"
+        },
+        "locale": {
+          "type": "string",
+          "enum": ["en", "uz"]
+        },
+        "currentLevel": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "targetGoal": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "deadlineDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "deadlineDays": {
+          "type": "number"
+        },
+        "dailyHours": {
+          "type": "number"
+        },
+        "totalAllocatedHours": {
+          "type": "number"
+        },
+        "strategySummary": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "dailySlotRecommendation": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "completed", "archived"]
+        },
+        "phases": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "blueprintId",
+        "category",
+        "title",
+        "locale",
+        "currentLevel",
+        "targetGoal",
+        "deadlineDate",
+        "deadlineDays",
+        "dailyHours",
+        "totalAllocatedHours",
+        "strategySummary",
+        "dailySlotRecommendation",
+        "status",
+        "phases",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DailyTask": {
+      "title": "DailyTask",
+      "description": "Time-blocked execution task decomposed by IAM AI Personal Execution Assistant.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "startTime": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "endTime": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "standard"]
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "executionSteps": {
+          "type": "array"
+        },
+        "simplificationNote": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "scheduledDate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "title",
+        "startTime",
+        "endTime",
+        "durationMinutes",
+        "priority",
+        "category",
+        "executionSteps",
+        "simplificationNote",
+        "completed",
+        "scheduledDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "NodeThread": {
+      "title": "NodeThread",
+      "description": "Scoped node-level AI tutor conversation thread bounded to recent turns.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "roadmapId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "nodeId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "messages": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "ownerId", "roadmapId", "nodeId", "messages", "updatedAt"]
+    },
+    "BlueprintCacheEntry": {
+      "title": "BlueprintCacheEntry",
+      "description": "Canonical cached AI tutor answer keyed by deterministic blueprint node hash.",
+      "type": "object",
+      "properties": {
+        "nodeHash": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "blueprintId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "nodeId": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "locale": {
+          "type": "string",
+          "enum": ["en", "uz"]
+        },
+        "answer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "nodeHash",
+        "blueprintId",
+        "nodeId",
+        "locale",
+        "answer",
+        "createdBy",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user settings and daily availability profile."
+    },
+    "/users/{userId}/roadmaps/{roadmapId}": {
+      "schema": { "$ref": "#/entities/Roadmap" },
+      "description": "User's adapted strategic roadmaps."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/DailyTask" },
+      "description": "User's daily time-blocked execution tasks."
+    },
+    "/users/{userId}/nodeThreads/{threadId}": {
+      "schema": { "$ref": "#/entities/NodeThread" },
+      "description": "User's scoped node-level AI tutor conversation history."
+    },
+    "/blueprintCache/{nodeHash}": {
+      "schema": { "$ref": "#/entities/BlueprintCacheEntry" },
+      "description": "Canonical cached concept answers per blueprint node hash."
+    }
+  }
+}

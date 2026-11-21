@@ -1,0 +1,312 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core hardened primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidStringList(listVal, maxLen) {
+      return listVal is list
+        && listVal.size() <= maxLen
+        && (listVal.size() == 0 || (listVal[0] is string && listVal[0].size() <= 300));
+    }
+
+    // Entity validation blueprints
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+          'uid', 'displayName', 'email', 'locale', 'dailyHours',
+          'busyWindows', 'preferredStartTime', 'preferredEndTime',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'photoURL', 'locale', 'dailyHours',
+          'busyWindows', 'preferredStartTime', 'preferredEndTime',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.uid == request.auth.uid
+        && isValidString(data.displayName, 1, 120)
+        && isValidString(data.email, 3, 180)
+        && (!('photoURL' in data) || isValidString(data.photoURL, 0, 500))
+        && (data.locale == 'en' || data.locale == 'uz')
+        && data.dailyHours is number && data.dailyHours >= 0.5 && data.dailyHours <= 12
+        && isValidStringList(data.busyWindows, 10)
+        && isValidString(data.preferredStartTime, 4, 10)
+        && isValidString(data.preferredEndTime, 4, 10)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidRoadmap(data, userId, roadmapId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'blueprintId', 'category', 'title', 'locale',
+          'currentLevel', 'targetGoal', 'deadlineDate', 'deadlineDays',
+          'dailyHours', 'totalAllocatedHours', 'strategySummary',
+          'dailySlotRecommendation', 'status', 'phases', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'blueprintId', 'category', 'title', 'locale',
+          'currentLevel', 'targetGoal', 'deadlineDate', 'deadlineDays',
+          'dailyHours', 'totalAllocatedHours', 'strategySummary',
+          'dailySlotRecommendation', 'status', 'phases', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == roadmapId
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isValidString(data.blueprintId, 1, 64)
+        && data.blueprintId.matches('^[a-zA-Z0-9_\\-]+$')
+        && (data.category == 'rhetoric' || data.category == 'academic' || data.category == 'legal')
+        && data.title is map
+        && data.title.keys().hasOnly(['en', 'uz'])
+        && isValidString(data.title.en, 1, 160)
+        && isValidString(data.title.uz, 1, 160)
+        && (data.locale == 'en' || data.locale == 'uz')
+        && isValidString(data.currentLevel, 1, 200)
+        && isValidString(data.targetGoal, 1, 200)
+        && isValidString(data.deadlineDate, 8, 20)
+        && data.deadlineDays is number && data.deadlineDays >= 1 && data.deadlineDays <= 365
+        && data.dailyHours is number && data.dailyHours >= 0.5 && data.dailyHours <= 12
+        && data.totalAllocatedHours is number && data.totalAllocatedHours >= 0 && data.totalAllocatedHours <= 5000
+        && isValidString(data.strategySummary, 1, 600)
+        && isValidString(data.dailySlotRecommendation, 1, 300)
+        && (data.status == 'active' || data.status == 'completed' || data.status == 'archived')
+        && data.phases is list && data.phases.size() >= 1 && data.phases.size() <= 8
+        && data.phases[0] is map
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDailyTask(data, userId, taskId) {
+      return data.keys().hasAll([
+          'id', 'ownerId', 'title', 'startTime', 'endTime', 'durationMinutes',
+          'priority', 'category', 'executionSteps', 'simplificationNote',
+          'completed', 'scheduledDate', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'title', 'startTime', 'endTime', 'durationMinutes',
+          'priority', 'category', 'executionSteps', 'simplificationNote',
+          'completed', 'scheduledDate', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == taskId
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isValidString(data.title, 1, 200)
+        && isValidString(data.startTime, 3, 20)
+        && isValidString(data.endTime, 3, 20)
+        && data.durationMinutes is number && data.durationMinutes >= 5 && data.durationMinutes <= 480
+        && (data.priority == 'critical' || data.priority == 'high' || data.priority == 'standard')
+        && isValidString(data.category, 1, 60)
+        && data.executionSteps is list && data.executionSteps.size() >= 1 && data.executionSteps.size() <= 6
+        && isValidString(data.executionSteps[0], 1, 300)
+        && isValidString(data.simplificationNote, 1, 300)
+        && data.completed is bool
+        && isValidString(data.scheduledDate, 8, 20)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidNodeThread(data, userId, threadId) {
+      return data.keys().hasAll(['id', 'ownerId', 'roadmapId', 'nodeId', 'messages', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerId', 'roadmapId', 'nodeId', 'messages', 'updatedAt'])
+        && isValidId(data.id)
+        && data.id == threadId
+        && isValidId(data.ownerId)
+        && data.ownerId == userId
+        && data.ownerId == request.auth.uid
+        && isValidId(data.roadmapId)
+        && isValidId(data.nodeId)
+        && data.messages is list && data.messages.size() <= 30
+        && (data.messages.size() == 0 || data.messages[0] is map)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBlueprintCache(data, nodeHash) {
+      return data.keys().hasAll([
+          'nodeHash', 'blueprintId', 'nodeId', 'locale', 'answer', 'createdBy', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'nodeHash', 'blueprintId', 'nodeId', 'locale', 'answer', 'createdBy', 'createdAt'
+        ])
+        && isValidId(data.nodeHash)
+        && data.nodeHash == nodeHash
+        && isValidString(data.blueprintId, 1, 64)
+        && data.blueprintId.matches('^[a-zA-Z0-9_\\-]+$')
+        && isValidString(data.nodeId, 1, 64)
+        && data.nodeId.matches('^[a-zA-Z0-9_\\-]+$')
+        && (data.locale == 'en' || data.locale == 'uz')
+        && isValidString(data.answer, 1, 3000)
+        && isValidId(data.createdBy)
+        && data.createdBy == request.auth.uid
+        && data.createdAt is timestamp;
+    }
+
+    // Users private profile (PII strictly owner-only)
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isVerifiedOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'photoURL', 'locale', 'dailyHours',
+          'busyWindows', 'preferredStartTime', 'preferredEndTime', 'updatedAt'
+        ]);
+
+      allow delete: if false;
+
+      // User's adapted roadmaps
+      match /roadmaps/{roadmapId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(roadmapId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(roadmapId)
+          && isValidRoadmap(incoming(), userId, roadmapId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(roadmapId)
+          && isValidRoadmap(incoming(), userId, roadmapId)
+          && existing().status != 'archived'
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().blueprintId == existing().blueprintId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action 1: Step progress or status update
+            incoming().diff(existing()).affectedKeys().hasOnly(['phases', 'status', 'updatedAt']) ||
+            // Action 2: Archive roadmap
+            (incoming().status == 'archived' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+          );
+
+        allow delete: if isVerifiedOwner(userId) && isValidId(userId) && isValidId(roadmapId);
+      }
+
+      // User's daily execution tasks
+      match /tasks/{taskId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(taskId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(taskId)
+          && isValidDailyTask(incoming(), userId, taskId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(taskId)
+          && isValidDailyTask(incoming(), userId, taskId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            // Action 1: Toggle completion
+            incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'updatedAt']) ||
+            // Action 2: Reschedule or edit task execution details
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'title', 'startTime', 'endTime', 'durationMinutes', 'priority',
+              'executionSteps', 'simplificationNote', 'scheduledDate', 'updatedAt'
+            ])
+          );
+
+        allow delete: if isVerifiedOwner(userId) && isValidId(userId) && isValidId(taskId);
+      }
+
+      // User's scoped node-level AI tutor threads
+      match /nodeThreads/{threadId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(threadId);
+        allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(threadId)
+          && isValidNodeThread(incoming(), userId, threadId)
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(userId)/roadmaps/$(incoming().roadmapId));
+
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(userId)
+          && isValidId(threadId)
+          && isValidNodeThread(incoming(), userId, threadId)
+          && incoming().id == existing().id
+          && incoming().ownerId == existing().ownerId
+          && incoming().roadmapId == existing().roadmapId
+          && incoming().nodeId == existing().nodeId
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['messages', 'updatedAt']);
+
+        allow delete: if isVerifiedOwner(userId) && isValidId(userId) && isValidId(threadId);
+      }
+    }
+
+    // Canonical blueprint concept cache (single-doc get by deterministic hash; no list scraping)
+    match /blueprintCache/{nodeHash} {
+      allow get: if isVerified() && isValidId(nodeHash);
+      allow list: if false;
+
+      allow create: if isVerified()
+        && isValidId(nodeHash)
+        && isValidBlueprintCache(incoming(), nodeHash)
+        && incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
