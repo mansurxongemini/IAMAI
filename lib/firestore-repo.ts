@@ -6,7 +6,6 @@ import {
   doc,
   getDoc,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -17,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import type { DailyTask, NodeChatMessage, Roadmap, UserProfile } from '@core/schemas';
 import { db, handleFirestoreError, OperationType } from './firebase';
+import { DICTIONARIES } from '@core/i18n';
 
 function toIsoString(value: unknown): string {
   if (value instanceof Timestamp) {
@@ -93,7 +93,7 @@ export function subscribeUserProfile(
       const d = snap.data();
       onData({
         uid: String(d.uid),
-        displayName: String(d.displayName ?? 'Executive Member'),
+        displayName: String(d.displayName ?? DICTIONARIES.en.common.member),
         email: String(d.email ?? ''),
         photoURL: typeof d.photoURL === 'string' ? d.photoURL : undefined,
         locale: d.locale === 'uz' ? 'uz' : 'en',
@@ -104,8 +104,16 @@ export function subscribeUserProfile(
         updatedAt: toIsoString(d.updatedAt),
       });
     },
-    (error) => handleFirestoreError(error, OperationType.GET, path)
+    (error) => reportListenerError(error, OperationType.GET, path)
   );
+}
+
+/**
+ * Live listeners must never throw: a throw inside onSnapshot's error callback is an
+ * uncaught error that takes the page down. Log it; the local cache keeps the UI working.
+ */
+function reportListenerError(error: unknown, op: OperationType, path: string): void {
+  console.warn(`[firestore] ${op} ${path}:`, error instanceof Error ? error.message : error);
 }
 
 export function subscribeRoadmaps(
@@ -113,11 +121,8 @@ export function subscribeRoadmaps(
   onData: (roadmaps: Roadmap[]) => void
 ): Unsubscribe {
   const path = `users/${uid}/roadmaps`;
-  const q = query(
-    collection(db, 'users', uid, 'roadmaps'),
-    where('ownerId', '==', uid),
-    orderBy('updatedAt', 'desc')
-  );
+  // Equality filter only (the rules require it); sorted on the client, so no composite index is needed.
+  const q = query(collection(db, 'users', uid, 'roadmaps'), where('ownerId', '==', uid));
   return onSnapshot(
     q,
     (snapshot) => {
@@ -130,9 +135,9 @@ export function subscribeRoadmaps(
           updatedAt: toIsoString(d.updatedAt),
         };
       });
-      onData(list);
+      onData(list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
     },
-    (error) => handleFirestoreError(error, OperationType.LIST, path)
+    (error) => reportListenerError(error, OperationType.LIST, path)
   );
 }
 
@@ -222,7 +227,7 @@ export function subscribeTasks(
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
       onData(list);
     },
-    (error) => handleFirestoreError(error, OperationType.LIST, path)
+    (error) => reportListenerError(error, OperationType.LIST, path)
   );
 }
 

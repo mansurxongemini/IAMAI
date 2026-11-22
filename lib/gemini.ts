@@ -1,7 +1,8 @@
+import 'server-only';
 import { GoogleGenAI, Type } from '@google/genai';
 
-export const FAST_STRUCTURED_MODEL = 'gemini-3.1-flash-lite';
-export const GENERAL_MENTOR_MODEL = 'gemini-4-hydrogen';
+export const FAST_STRUCTURED_MODEL = process.env.GEMINI_FAST_MODEL || 'gemini-3.1-flash-lite';
+export const GENERAL_MENTOR_MODEL = process.env.GEMINI_MENTOR_MODEL || 'gemini-4-hydrogen';
 
 let cachedClient: GoogleGenAI | null = null;
 

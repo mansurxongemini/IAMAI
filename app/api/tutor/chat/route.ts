@@ -3,19 +3,14 @@ import { buildNodeTutorPrompt } from '@core/prompts';
 import { computeNodeCacheHash } from '@core/scheduler';
 import { TutorNodeChatInputSchema } from '@core/schemas';
 import { GENERAL_MENTOR_MODEL, getGeminiClient } from '@/lib/gemini';
-import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
   try {
-    const clientId = getClientIdentifier(request);
-    if (!checkRateLimit(`tutor:${clientId}`, 30, 60_000)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please wait briefly before sending another question.' },
-        { status: 429 }
-      );
-    }
+    const gate = await guard(request, 'tutor');
+    if (!gate.ok) return gate.response;
 
-    const body = await request.json();
+    const body = (await readJson(request)) as Record<string, unknown>;
     const parsed = TutorNodeChatInputSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -53,6 +48,7 @@ export async function POST(request: Request) {
       model: GENERAL_MENTOR_MODEL,
       contents,
       config: {
+        maxOutputTokens: 600,
         systemInstruction: prompt.systemInstruction,
       },
     });
@@ -67,7 +63,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ reply, nodeHash });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Node tutor request failed.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('tutor', error);
   }
 }

@@ -1,26 +1,21 @@
 import { NextResponse } from 'next/server';
 import { getBlueprintById } from '@core/blueprints';
 import { buildDeltaPatchPrompt } from '@core/prompts';
-import { applyDeltaPatchAndSchedule } from '@core/scheduler';
-import { AdaptRoadmapInputSchema, GeminiDeltaPatchSchema } from '@core/schemas';
+import { applyDeltaPatchAndSchedule, buildSeedDeltaPatch } from '@core/scheduler';
+import { AdaptRoadmapInputSchema, GeminiDeltaPatchSchema, type GeminiDeltaPatch } from '@core/schemas';
 import {
   DELTA_PATCH_RESPONSE_SCHEMA,
   FAST_STRUCTURED_MODEL,
   getGeminiClient,
 } from '@/lib/gemini';
-import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
   try {
-    const clientId = getClientIdentifier(request);
-    if (!checkRateLimit(`adapt:${clientId}`, 20, 60_000)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please wait a moment before generating another plan.' },
-        { status: 429 }
-      );
-    }
+    const gate = await guard(request, 'adapt');
+    if (!gate.ok) return gate.response;
 
-    const body = await request.json();
+    const body = (await readJson(request)) as Record<string, unknown>;
     const parsedInput = AdaptRoadmapInputSchema.safeParse(body);
     if (!parsedInput.success) {
       return NextResponse.json(
@@ -35,43 +30,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Selected blueprint not found.' }, { status: 404 });
     }
 
-    const prompt = buildDeltaPatchPrompt(blueprint, input);
-    const ai = getGeminiClient();
-
-    const response = await ai.models.generateContent({
-      model: FAST_STRUCTURED_MODEL,
-      contents: prompt.contents,
-      config: {
-        systemInstruction: prompt.systemInstruction,
-        responseMimeType: 'application/json',
-        responseSchema: DELTA_PATCH_RESPONSE_SCHEMA,
-      },
-    });
-
-    const rawText = (response.text ?? '').trim();
-    if (!rawText) {
-      return NextResponse.json(
-        { error: 'Empty adaptation response received from Gemini.' },
-        { status: 502 }
-      );
-    }
-
-    const parsedJson = JSON.parse(rawText);
-    const validatedPatch = GeminiDeltaPatchSchema.safeParse(parsedJson);
-    if (!validatedPatch.success) {
-      return NextResponse.json(
-        {
-          error: 'Adaptation payload did not match required schema.',
-          details: validatedPatch.error.flatten(),
+    // Blueprint-first: Gemini only personalises. If it is unavailable or returns an
+    // invalid patch, the deterministic baseline still produces a complete plan.
+    let deltaPatch: GeminiDeltaPatch;
+    let adapted = true;
+    try {
+      const prompt = buildDeltaPatchPrompt(blueprint, input);
+      const response = await getGeminiClient().models.generateContent({
+        model: FAST_STRUCTURED_MODEL,
+        contents: prompt.contents,
+        config: {
+          maxOutputTokens: 1200,
+          systemInstruction: prompt.systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: DELTA_PATCH_RESPONSE_SCHEMA,
         },
-        { status: 502 }
-      );
+      });
+      const validated = GeminiDeltaPatchSchema.safeParse(JSON.parse((response.text ?? '').trim()));
+      if (!validated.success) throw new Error('Delta patch failed schema validation');
+      deltaPatch = validated.data;
+    } catch (err) {
+      console.warn('[api:adapt] falling back to deterministic plan:', err instanceof Error ? err.message : err);
+      deltaPatch = buildSeedDeltaPatch(blueprint, input);
+      adapted = false;
     }
 
-    const ownerId =
-      typeof body.ownerId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(body.ownerId)
-        ? body.ownerId
-        : 'local-executive';
+    // Identity comes only from the verified token, never from the request body.
+    const ownerId = gate.user?.uid ?? 'local-executive';
     const roadmapId = `rm_${blueprint.id}_${Date.now().toString(36)}`;
 
     const roadmap = applyDeltaPatchAndSchedule({
@@ -79,15 +64,11 @@ export async function POST(request: Request) {
       ownerId,
       blueprint,
       input,
-      deltaPatch: validatedPatch.data,
+      deltaPatch,
     });
 
-    return NextResponse.json({
-      deltaPatch: validatedPatch.data,
-      roadmap,
-    });
+    return NextResponse.json({ deltaPatch, roadmap, adapted });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to adapt roadmap.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('adapt', error);
   }
 }

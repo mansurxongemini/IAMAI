@@ -52,7 +52,7 @@ export function NodeTutorDrawer({
         question: trimmed,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to reach AI Tutor.');
+      setError(err instanceof Error ? err.message : dict.errors.tutorFailed);
     } finally {
       setLoading(false);
     }
@@ -60,21 +60,21 @@ export function NodeTutorDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-[#1C1C1A]/25 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex justify-end bg-ink/25 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       aria-label={dict.roadmap.tutorTitle}
     >
-      <div className="w-full max-w-lg h-full bg-[#F4F1EC] border-l border-[#1C1C1A]/10 flex flex-col shadow-2xl">
+      <div className="w-full max-w-lg h-full bg-canvas border-l border-ink/10 flex flex-col shadow-2xl">
         {/* Drawer Header */}
-        <div className="px-6 py-5 border-b border-[#1C1C1A]/10 flex items-start justify-between gap-4 bg-white/70">
+        <div className="px-6 py-5 border-b border-ink/10 flex items-start justify-between gap-4 bg-surface/70">
           <div className="space-y-1 min-w-0">
-            <p className="text-xs text-[#6E573E]">{dict.roadmap.tutorTitle}</p>
-            <h2 className="font-editorial text-2xl font-medium text-[#1C1C1A] leading-tight">
+            <p className="text-xs text-accent">{dict.roadmap.tutorTitle}</p>
+            <h2 className="font-editorial text-2xl font-medium text-ink leading-tight">
               {node.title[locale]}
             </h2>
             {activeStep && (
-              <p className="text-xs text-[#6A6760] truncate">
+              <p className="text-xs text-muted truncate">
                 {activeStep.title[locale]} · {activeStep.framework}
               </p>
             )}
@@ -83,7 +83,7 @@ export function NodeTutorDrawer({
             type="button"
             onClick={onClose}
             aria-label={dict.common.close}
-            className="w-9 h-9 rounded-full border border-[#1C1C1A]/12 flex items-center justify-center text-[#1C1C1A] hover:bg-[#1C1C1A] hover:text-white transition-colors shrink-0 cursor-pointer"
+            className="w-9 h-9 rounded-none border border-ink/12 flex items-center justify-center text-ink hover:bg-accent hover:text-on-accent hover:border-accent transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -93,14 +93,14 @@ export function NodeTutorDrawer({
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {messages.length === 0 ? (
             <div className="space-y-4 pt-4">
-              <p className="text-sm text-[#6A6760] leading-relaxed">{dict.roadmap.tutorEmpty}</p>
+              <p className="text-sm text-muted leading-relaxed">{dict.roadmap.tutorEmpty}</p>
               <div className="space-y-2">
                 {[dict.roadmap.tutorPrompt1, dict.roadmap.tutorPrompt2].map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
                     onClick={() => void submitQuestion(suggestion)}
-                    className="w-full text-left glass-surface rounded-2xl px-4 py-3 text-xs font-medium text-[#1C1C1A] hover:bg-white transition-colors cursor-pointer"
+                    className="w-full text-left glass-surface rounded-2xl px-4 py-3 text-xs font-medium text-ink hover:bg-surface transition-colors cursor-pointer"
                   >
                     {suggestion}
                   </button>
@@ -118,14 +118,14 @@ export function NodeTutorDrawer({
                 <div
                   className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === 'user'
-                      ? 'bg-[#1C1C1A] text-white'
-                      : 'glass-surface text-[#1C1C1A]'
+                      ? 'bg-accent text-on-accent'
+                      : 'glass-surface text-ink'
                   }`}
                 >
                   {msg.content}
                 </div>
                 {msg.cached && (
-                  <span className="mt-1 text-[11px] text-[#6E573E]">
+                  <span className="mt-1 text-[11px] text-accent">
                     {dict.roadmap.cachedNote}
                   </span>
                 )}
@@ -134,14 +134,14 @@ export function NodeTutorDrawer({
           )}
 
           {loading && (
-            <div className="flex items-center gap-2 text-xs text-[#6A6760]">
+            <div className="flex items-center gap-2 text-xs text-muted">
               <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
               <span>IAM AI...</span>
             </div>
           )}
 
           {error && (
-            <p role="alert" className="text-xs text-[#9E2A2B] bg-[#9E2A2B]/8 rounded-2xl p-3">
+            <p role="alert" className="text-xs text-danger bg-danger/8 rounded-2xl p-3">
               {error}
             </p>
           )}
@@ -153,7 +153,7 @@ export function NodeTutorDrawer({
             e.preventDefault();
             void submitQuestion(question);
           }}
-          className="p-4 border-t border-[#1C1C1A]/10 bg-white/75"
+          className="p-4 border-t border-ink/10 bg-surface/75"
         >
           <div className="flex items-center gap-2">
             <label htmlFor="node-tutor-input" className="sr-only">
@@ -166,13 +166,13 @@ export function NodeTutorDrawer({
               onChange={(e) => setQuestion(e.target.value)}
               placeholder={dict.roadmap.tutorPlaceholder}
               disabled={loading}
-              className="flex-1 rounded-full bg-[#F4F1EC] border border-[#1C1C1A]/12 px-4 py-2.5 text-sm text-[#1C1C1A] placeholder:text-[#6A6760] focus:outline-none focus:border-[#1C1C1A]"
+              className="flex-1 rounded-none bg-canvas border border-ink/12 px-4 py-2.5 text-sm text-ink placeholder:text-muted focus:border-ink"
             />
             <button
               type="submit"
               disabled={loading || question.trim().length < 2}
               aria-label={dict.roadmap.tutorSend}
-              className="w-10 h-10 rounded-full bg-[#1C1C1A] text-white flex items-center justify-center hover:bg-[#32322F] transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
+              className="w-10 h-10 rounded-none bg-accent text-on-accent flex items-center justify-center hover:bg-accent/90 transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
             >
               <ArrowUp className="w-4 h-4" aria-hidden="true" />
             </button>

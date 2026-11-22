@@ -5,3 +5,10 @@ coverage/
 *.log
 .env*
 !.env.example
+.claude/
+
+# local tooling and build caches
+.taste-skill/
+*.tsbuildinfo
+.firebase/
+public/taste/

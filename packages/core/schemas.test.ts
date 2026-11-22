@@ -22,11 +22,30 @@ test('all 10 pre-authored expert blueprints validate strictly against BlueprintS
 });
 
 test('EN and UZ dictionaries contain identical structural keys and non-empty strings', () => {
-  const enKeys = Object.keys(DICTIONARIES.en).sort();
-  const uzKeys = Object.keys(DICTIONARIES.uz).sort();
-  assert.deepEqual(enKeys, uzKeys);
-  assert.ok(DICTIONARIES.uz.rhetoric.title.length > 5);
-  assert.ok(DICTIONARIES.uz.certifications.title.length > 5);
+  // Same shape at every depth (arrays may differ in length: e.g. word lists), and no empty strings.
+  const shape = (v: unknown, path: string, out: string[]) => {
+    if (typeof v === 'string') {
+      assert.ok(v.trim().length > 0, `empty string at ${path}`);
+      return;
+    }
+    if (typeof v === 'function' || Array.isArray(v)) {
+      out.push(path);
+      if (Array.isArray(v)) v.forEach((x, i) => shape(x, `${path}[${i}]`, []));
+      return;
+    }
+    if (v && typeof v === 'object') {
+      for (const k of Object.keys(v).sort()) {
+        out.push(`${path}.${k}`);
+        shape((v as Record<string, unknown>)[k], `${path}.${k}`, out);
+      }
+    }
+  };
+  const en: string[] = [];
+  const uz: string[] = [];
+  shape(DICTIONARIES.en, '', en);
+  shape(DICTIONARIES.uz, '', uz);
+  assert.deepEqual(uz, en);
+  assert.equal(DICTIONARIES.uz.today.streak(3), '3 kun ketma-ket');
 });
 
 test('Zod validation enforces boundaries on AdaptRoadmapInput and Gemini outputs', () => {

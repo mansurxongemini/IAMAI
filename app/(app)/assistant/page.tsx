@@ -5,7 +5,9 @@ import { ArrowRight, ArrowUp, Check, Circle, Loader2, Trash2 } from 'lucide-reac
 import { formatIsoDate } from '@core/scheduler';
 import type { MentorRole } from '@core/schemas';
 import { AppShell } from '@/components/AppShell';
+import { Topbar } from '@/components/workspace/Topbar';
 import { useWorkspace } from '@/components/WorkspaceProvider';
+import { apiPost } from '@/lib/api-client';
 
 type AssistantTab = 'planner' | 'mentor';
 
@@ -49,21 +51,14 @@ export default function AssistantPage() {
     e.preventDefault();
     const trimmed = rawInput.trim();
     if (trimmed.length < 4) {
-      setPlanError(
-        locale === 'uz'
-          ? 'Kamida bitta vazifa yoki majburiyat kiriting.'
-          : 'Please enter at least one task or obligation to sequence.'
-      );
+      setPlanError(dict.errors.sequenceTooShort);
       return;
     }
 
     setPlanError(null);
     setSequencing(true);
     try {
-      const res = await fetch('/api/tasks/decompose', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { ok: resOk, data } = await apiPost('/api/tasks/decompose', {
           rawInput: trimmed,
           locale,
           date: formatIsoDate(new Date()),
@@ -71,11 +66,9 @@ export default function AssistantPage() {
           availableEnd: profile.preferredEndTime,
           busyWindows: profile.busyWindows,
           ownerId: user?.uid ?? 'local-executive',
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to sequence tasks.');
+        });
+      if (!resOk) {
+        throw new Error(data.error || dict.errors.sequenceFailed);
       }
       if (data.dayBrief) setDayBrief(data.dayBrief);
       if (Array.isArray(data.tasks) && data.tasks.length > 0) {
@@ -83,7 +76,7 @@ export default function AssistantPage() {
       }
       setRawInput('');
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : 'Unable to decompose tasks.');
+      setPlanError(err instanceof Error ? err.message : dict.errors.sequenceFailed);
     } finally {
       setSequencing(false);
     }
@@ -99,7 +92,7 @@ export default function AssistantPage() {
     try {
       await sendMentorMessage(mentorRole, trimmed);
     } catch (err) {
-      setMentorError(err instanceof Error ? err.message : 'Mentor request failed.');
+      setMentorError(err instanceof Error ? err.message : dict.errors.mentorFailed);
     } finally {
       setMentorLoading(false);
     }
@@ -108,33 +101,33 @@ export default function AssistantPage() {
   const completedCount = tasks.filter((t) => t.completed).length;
 
   return (
-    <AppShell>
-      <div className="space-y-8">
+    <><Topbar crumbs={[{ label: dict.nav.assistant }]} /><AppShell>
+      <div className="space-y-8 page-enter">
         <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="space-y-1.5">
-            <p className="text-xs text-[#6E573E]">
+            <p className="text-xs text-accent">
               {profile.preferredStartTime}–{profile.preferredEndTime}
             </p>
-            <h1 className="font-editorial text-4xl sm:text-5xl font-medium tracking-tight text-[#1C1C1A]">
+            <h1 className="font-editorial text-4xl sm:text-5xl font-medium tracking-tight text-ink">
               {dict.assistant.title}
             </h1>
-            <p className="text-sm text-[#6A6760] max-w-2xl">{dict.assistant.subtitle}</p>
+            <p className="text-sm text-muted max-w-2xl">{dict.assistant.subtitle}</p>
           </div>
 
           <div
             role="tablist"
-            aria-label="Assistant mode"
-            className="glass-surface rounded-full p-1 inline-flex items-center gap-1 self-start sm:self-end shrink-0"
+            aria-label={dict.a11y.assistantMode}
+            className="glass-surface rounded-none p-1 inline-flex items-center gap-1 self-start sm:self-end shrink-0"
           >
             <button
               type="button"
               role="tab"
               aria-selected={tab === 'planner'}
               onClick={() => setTab('planner')}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 tab === 'planner'
-                  ? 'bg-[#1C1C1A] text-white'
-                  : 'text-[#6A6760] hover:text-[#1C1C1A]'
+                  ? 'bg-accent text-on-accent'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               {dict.assistant.tabPlanner}
@@ -144,10 +137,10 @@ export default function AssistantPage() {
               role="tab"
               aria-selected={tab === 'mentor'}
               onClick={() => setTab('mentor')}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 tab === 'mentor'
-                  ? 'bg-[#1C1C1A] text-white'
-                  : 'text-[#6A6760] hover:text-[#1C1C1A]'
+                  ? 'bg-accent text-on-accent'
+                  : 'text-muted hover:text-ink'
               }`}
             >
               {dict.assistant.tabMentor}
@@ -179,7 +172,7 @@ export default function AssistantPage() {
                   value={rawInput}
                   onChange={(e) => setRawInput(e.target.value)}
                   placeholder={dict.assistant.inputPlaceholder}
-                  className="w-full rounded-2xl bg-white/10 border border-white/15 px-4 py-3 text-sm text-white placeholder:text-white/45 focus:outline-none focus:border-white/40 resize-none"
+                  className="w-full rounded-2xl bg-surface/10 border border-white/15 px-4 py-3 text-sm text-white placeholder:text-white/45 focus:border-white/40 resize-none"
                 />
 
                 {planError && (
@@ -191,7 +184,7 @@ export default function AssistantPage() {
                 <button
                   type="submit"
                   disabled={sequencing}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white text-[#1C1C1A] px-5 py-3.5 text-sm font-medium hover:bg-[#EAE5DC] transition-colors disabled:opacity-60 cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-none bg-white text-[#1C1C1A] px-5 py-3.5 text-sm font-medium hover:bg-[#EAE5DC] transition-colors disabled:opacity-60 cursor-pointer"
                 >
                   {sequencing ? (
                     <>
@@ -212,21 +205,21 @@ export default function AssistantPage() {
             <div className="lg:col-span-7 space-y-4">
               {dayBrief && (
                 <div className="glass-surface rounded-3xl p-5 space-y-1">
-                  <p className="text-xs text-[#6E573E]">{dict.assistant.dayBrief}</p>
-                  <p className="text-sm text-[#1C1C1A] leading-relaxed">{dayBrief}</p>
+                  <p className="text-xs text-accent">{dict.assistant.dayBrief}</p>
+                  <p className="text-sm text-ink leading-relaxed">{dayBrief}</p>
                 </div>
               )}
 
               <div className="glass-surface rounded-3xl p-6 sm:p-7 space-y-5">
                 <div className="flex items-center justify-between gap-4">
-                  <h2 className="font-editorial text-2xl sm:text-3xl font-medium text-[#1C1C1A]">
+                  <h2 className="font-editorial text-2xl sm:text-3xl font-medium text-ink">
                     {dict.dashboard.todaySchedule}
                   </h2>
                   {completedCount > 0 && (
                     <button
                       type="button"
                       onClick={() => void clearCompletedTasks()}
-                      className="inline-flex items-center gap-1.5 text-xs text-[#6A6760] hover:text-[#1C1C1A] transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                       <span>{dict.assistant.clearCompleted}</span>
@@ -235,9 +228,9 @@ export default function AssistantPage() {
                 </div>
 
                 {tasks.length === 0 ? (
-                  <p className="text-sm text-[#6A6760] py-8">{dict.dashboard.noTasks}</p>
+                  <p className="text-sm text-muted py-8">{dict.dashboard.noTasks}</p>
                 ) : (
-                  <div className="divide-y divide-[#1C1C1A]/8">
+                  <div className="divide-y divide-ink/8">
                     {tasks.map((task) => (
                       <article key={task.id} className="py-5 first:pt-1 last:pb-1 space-y-3">
                         <div className="flex items-start gap-4">
@@ -247,8 +240,8 @@ export default function AssistantPage() {
                             aria-label={`Toggle task "${task.title}"`}
                             className={`mt-1 w-5 h-5 rounded-full flex items-center justify-center border transition-colors shrink-0 cursor-pointer ${
                               task.completed
-                                ? 'bg-[#1C1C1A] border-[#1C1C1A] text-white'
-                                : 'border-[#1C1C1A]/30 text-transparent hover:border-[#1C1C1A]'
+                                ? 'bg-accent border-ink text-on-accent'
+                                : 'border-ink/30 text-transparent hover:border-ink'
                             }`}
                           >
                             {task.completed ? (
@@ -259,8 +252,8 @@ export default function AssistantPage() {
                           </button>
 
                           <div className="flex-1 min-w-0 space-y-1.5">
-                            <div className="flex items-center flex-wrap gap-2 text-xs text-[#6A6760]">
-                              <span className="font-mono-tabular text-[#1C1C1A] font-medium">
+                            <div className="flex items-center flex-wrap gap-2 text-xs text-muted">
+                              <span className="font-mono-tabular text-ink font-medium">
                                 {task.startTime}–{task.endTime}
                               </span>
                               <span aria-hidden="true">·</span>
@@ -268,22 +261,22 @@ export default function AssistantPage() {
                                 {task.durationMinutes} {dict.common.minutes}
                               </span>
                               <span aria-hidden="true">·</span>
-                              <span className="text-[#6E573E]">{task.category}</span>
+                              <span className="text-accent">{task.category}</span>
                             </div>
 
                             <h3
                               className={`font-editorial text-2xl font-medium ${
-                                task.completed ? 'line-through text-[#6A6760]' : 'text-[#1C1C1A]'
+                                task.completed ? 'line-through text-muted' : 'text-ink'
                               }`}
                             >
                               {task.title}
                             </h3>
 
                             <div className="pt-1 space-y-2">
-                              <p className="text-xs font-medium text-[#1C1C1A]">
+                              <p className="text-xs font-medium text-ink">
                                 {dict.assistant.executionSteps}
                               </p>
-                              <ol className="space-y-1 text-xs text-[#6A6760] list-decimal list-inside">
+                              <ol className="space-y-1 text-xs text-muted list-decimal list-inside">
                                 {task.executionSteps.map((step, idx) => (
                                   <li key={`${task.id}-s-${idx}`} className="leading-relaxed">
                                     {step}
@@ -292,7 +285,7 @@ export default function AssistantPage() {
                               </ol>
                             </div>
 
-                            <p className="pt-1 text-xs text-[#6E573E]">
+                            <p className="pt-1 text-xs text-accent">
                               <span className="font-medium">{dict.assistant.simplification}:</span>{' '}
                               {task.simplificationNote}
                             </p>
@@ -309,18 +302,18 @@ export default function AssistantPage() {
           /* Multi-Turn Executive Mentor Chat Tab */
           <section className="glass-surface rounded-3xl overflow-hidden flex flex-col min-h-[580px]">
             {/* Role Selector Bar */}
-            <div className="px-6 py-4 border-b border-[#1C1C1A]/8 flex flex-wrap items-center justify-between gap-3 bg-white/50">
-              <span className="text-xs text-[#6A6760]">{dict.assistant.mentorRoleLabel}</span>
-              <div role="group" aria-label="Mentor role" className="flex flex-wrap gap-1.5">
+            <div className="px-6 py-4 border-b border-ink/8 flex flex-wrap items-center justify-between gap-3 bg-surface/50">
+              <span className="text-xs text-muted">{dict.assistant.mentorRoleLabel}</span>
+              <div role="group" aria-label={dict.a11y.mentorRole} className="flex flex-wrap gap-1.5">
                 {(['executive', 'rhetoric', 'legal', 'exam'] as const).map((r) => (
                   <button
                     key={r}
                     type="button"
                     onClick={() => setMentorRole(r)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                       mentorRole === r
-                        ? 'bg-[#1C1C1A] text-white'
-                        : 'text-[#6A6760] hover:text-[#1C1C1A] hover:bg-white/70'
+                        ? 'bg-accent text-on-accent'
+                        : 'text-muted hover:text-ink hover:bg-surface/70'
                     }`}
                   >
                     {dict.assistant.roles[r]}
@@ -337,55 +330,13 @@ export default function AssistantPage() {
               {activeThread.length === 0 ? (
                 <div className="py-10 text-center space-y-5 max-w-lg mx-auto">
                   <div className="space-y-2">
-                    <p className="font-editorial text-3xl text-[#1C1C1A]">
+                    <p className="font-editorial text-3xl text-ink">
                       {dict.assistant.roles[mentorRole]}
                     </p>
-                    <p className="text-sm text-[#6A6760]">{dict.assistant.mentorEmpty}</p>
+                    <p className="text-sm text-muted">{dict.assistant.mentorEmpty}</p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left">
-                    {(
-                      {
-                        executive:
-                          locale === 'uz'
-                            ? [
-                                'Bugungi 3 ta eng muhim strategik ustuvorligimni qanday ajratay?',
-                                '5 daqiqalik rahbariyat brifingi tuzilmasini bering.',
-                              ]
-                            : [
-                                'How should I sequence 3 competing executive deadlines today?',
-                                'Give me a crisp 5-minute board briefing structure.',
-                              ],
-                        rhetoric:
-                          locale === 'uz'
-                            ? [
-                                'TEDx nutqim uchun ilk 30 soniyalik kuchli ilgak tuzib bering.',
-                                'Qarshi soʻroqda chalgʻituvchi guvohni qanday toʻxtataman?',
-                              ]
-                            : [
-                                'How do I stop a hostile witness from giving long speeches?',
-                                'Help me craft a zero-preamble 30-second TEDx opening hook.',
-                              ],
-                        legal:
-                          locale === 'uz'
-                            ? [
-                                'Bar Exam MEE uchun 30 daqiqalik IRAC qolipini tushuntiring.',
-                                'TOLES shartnomasida indemnity va warranty farqi nimada?',
-                              ]
-                            : [
-                                'Contrast warranty, representation, and indemnity for TOLES.',
-                                'How do I pace a 90-minute MPT closed-universe brief?',
-                              ],
-                        exam:
-                          locale === 'uz'
-                            ? [
-                                'IELTS Writing Task 2 da Band 6.5 dan 7.5 ga chiqish kaliti nima?',
-                                'Digital SAT 2-modulda vaqtni qanday boshqaray?',
-                              ]
-                            : [
-                                'What separates Band 6.5 from Band 7.5+ in IELTS Task 2?',
-                                'Give me a 2-pass timing system for hard Digital SAT Module 2.',
-                              ],
-                      }[mentorRole]
+                    {(dict.mentorPrompts[mentorRole]
                     ).map((starter) => (
                       <button
                         key={starter}
@@ -393,7 +344,7 @@ export default function AssistantPage() {
                         onClick={() => {
                           setMentorInput(starter);
                         }}
-                        className="rounded-2xl bg-white/80 border border-[#1C1C1A]/10 px-4 py-3 text-xs font-medium text-[#1C1C1A] hover:bg-white transition-colors cursor-pointer"
+                        className="rounded-2xl bg-surface/80 border border-ink/10 px-4 py-3 text-xs font-medium text-ink hover:bg-surface transition-colors cursor-pointer"
                       >
                         {starter}
                       </button>
@@ -409,8 +360,8 @@ export default function AssistantPage() {
                     <div
                       className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                         msg.role === 'user'
-                          ? 'bg-[#1C1C1A] text-white'
-                          : 'bg-white/85 border border-[#1C1C1A]/8 text-[#1C1C1A]'
+                          ? 'bg-accent text-on-accent'
+                          : 'bg-surface/85 border border-ink/8 text-ink'
                       }`}
                     >
                       {msg.content}
@@ -420,14 +371,14 @@ export default function AssistantPage() {
               )}
 
               {mentorLoading && (
-                <div className="flex items-center gap-2 text-xs text-[#6A6760]">
+                <div className="flex items-center gap-2 text-xs text-muted">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                   <span>IAM AI...</span>
                 </div>
               )}
 
               {mentorError && (
-                <p role="alert" className="text-xs text-[#9E2A2B] bg-[#9E2A2B]/8 rounded-2xl p-3">
+                <p role="alert" className="text-xs text-danger bg-danger/8 rounded-2xl p-3">
                   {mentorError}
                 </p>
               )}
@@ -436,7 +387,7 @@ export default function AssistantPage() {
             {/* Message Input */}
             <form
               onSubmit={handleMentorSend}
-              className="p-4 border-t border-[#1C1C1A]/8 bg-white/65 flex items-center gap-3"
+              className="p-4 border-t border-ink/8 bg-surface/65 flex items-center gap-3"
             >
               <label htmlFor="mentor-chat-input" className="sr-only">
                 {dict.assistant.mentorPlaceholder}
@@ -448,13 +399,13 @@ export default function AssistantPage() {
                 onChange={(e) => setMentorInput(e.target.value)}
                 placeholder={dict.assistant.mentorPlaceholder}
                 disabled={mentorLoading}
-                className="flex-1 rounded-full bg-[#F4F1EC] border border-[#1C1C1A]/12 px-5 py-3 text-sm text-[#1C1C1A] placeholder:text-[#6A6760] focus:outline-none focus:border-[#1C1C1A]"
+                className="flex-1 rounded-none bg-canvas border border-ink/12 px-5 py-3 text-sm text-ink placeholder:text-muted focus:border-ink"
               />
               <button
                 type="submit"
                 disabled={mentorLoading || !mentorInput.trim()}
                 aria-label={dict.assistant.mentorSend}
-                className="inline-flex items-center gap-2 rounded-full bg-[#1C1C1A] text-white px-5 py-3 text-sm font-medium hover:bg-[#32322F] transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-none bg-accent text-on-accent px-5 py-3 text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
               >
                 <span>{dict.assistant.mentorSend}</span>
                 <ArrowUp className="w-4 h-4" aria-hidden="true" />
@@ -463,6 +414,6 @@ export default function AssistantPage() {
           </section>
         )}
       </div>
-    </AppShell>
+    </AppShell></>
   );
 }
