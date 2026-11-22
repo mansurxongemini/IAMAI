@@ -117,14 +117,14 @@ export default function AssistantPage() {
           <div
             role="tablist"
             aria-label={dict.a11y.assistantMode}
-            className="glass-surface rounded-none p-1 inline-flex items-center gap-1 self-start sm:self-end shrink-0"
+            className="glass-surface rounded-full p-1 inline-flex items-center gap-1 self-start sm:self-end shrink-0"
           >
             <button
               type="button"
               role="tab"
               aria-selected={tab === 'planner'}
               onClick={() => setTab('planner')}
-              className={`px-4 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 tab === 'planner'
                   ? 'bg-accent text-on-accent'
                   : 'text-muted hover:text-ink'
@@ -137,7 +137,7 @@ export default function AssistantPage() {
               role="tab"
               aria-selected={tab === 'mentor'}
               onClick={() => setTab('mentor')}
-              className={`px-4 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 tab === 'mentor'
                   ? 'bg-accent text-on-accent'
                   : 'text-muted hover:text-ink'
@@ -153,7 +153,7 @@ export default function AssistantPage() {
             {/* Task Intake (5 cols) */}
             <div className="lg:col-span-5 obsidian-surface rounded-3xl p-6 sm:p-7 space-y-5 sticky top-24">
               <div className="space-y-1">
-                <p className="text-xs text-[#C7B9A5]">
+                <p className="text-xs text-[var(--h-gold-light)]">
                   {formatIsoDate(new Date())} · {profile.preferredStartTime}–
                   {profile.preferredEndTime}
                 </p>
@@ -176,7 +176,7 @@ export default function AssistantPage() {
                 />
 
                 {planError && (
-                  <p role="alert" className="text-xs text-[#F3C6B8]">
+                  <p role="alert" className="text-xs text-[var(--h-ember-light)]">
                     {planError}
                   </p>
                 )}
@@ -184,7 +184,7 @@ export default function AssistantPage() {
                 <button
                   type="submit"
                   disabled={sequencing}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-none bg-white text-[#1C1C1A] px-5 py-3.5 text-sm font-medium hover:bg-[#EAE5DC] transition-colors disabled:opacity-60 cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#f1f1f4] text-[#121213] px-5 py-3.5 text-sm font-semibold hover:bg-white transition-colors disabled:opacity-60 cursor-pointer"
                 >
                   {sequencing ? (
                     <>
@@ -310,7 +310,7 @@ export default function AssistantPage() {
                     key={r}
                     type="button"
                     onClick={() => setMentorRole(r)}
-                    className={`px-3.5 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                       mentorRole === r
                         ? 'bg-accent text-on-accent'
                         : 'text-muted hover:text-ink hover:bg-surface/70'
@@ -399,13 +399,13 @@ export default function AssistantPage() {
                 onChange={(e) => setMentorInput(e.target.value)}
                 placeholder={dict.assistant.mentorPlaceholder}
                 disabled={mentorLoading}
-                className="flex-1 rounded-none bg-canvas border border-ink/12 px-5 py-3 text-sm text-ink placeholder:text-muted focus:border-ink"
+                className="flex-1 rounded-full bg-canvas border border-ink/12 px-5 py-3 text-sm text-ink placeholder:text-muted focus:border-ink"
               />
               <button
                 type="submit"
                 disabled={mentorLoading || !mentorInput.trim()}
                 aria-label={dict.assistant.mentorSend}
-                className="inline-flex items-center gap-2 rounded-none bg-accent text-on-accent px-5 py-3 text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-full bg-accent text-on-accent px-5 py-3 text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
               >
                 <span>{dict.assistant.mentorSend}</span>
                 <ArrowUp className="w-4 h-4" aria-hidden="true" />

@@ -21,6 +21,9 @@ export function buildDeltaPatchPrompt(blueprint: Blueprint, input: AdaptRoadmapI
       'You NEVER regenerate a syllabus from scratch. You ONLY return a compact JSON delta patch adapting the provided expert blueprint outline to the user profile.',
       'Be realistic with the user hour budget (deadlineDays * dailyHours). Skip or compress foundational modules if the user already has that baseline; intensify weak areas.',
       'Keep strategySummary under 240 characters, each customFocus under 180 characters, and dailySlotRecommendation concrete.',
+      'Return one entry per moduleId of the outline, using the exact ids. priority must be exactly one of the English words skip, low, normal, high — never translated, never "medium" or "critical".',
+      'allocatedHours are relative weights for the plan; keep each within 0.5x–2x of the module baselineHours unless you skip it. If the budget is far below baselineTotalHours, say so plainly in strategySummary.',
+      'busyWindows are times the user cannot study: the dailySlotRecommendation must avoid them and use valid 24-hour times.',
       langRule,
     ].join(' '),
     contents: JSON.stringify({
@@ -76,6 +79,7 @@ export function buildTaskDecomposePrompt(input: DecomposeTasksInput) {
       'Convert raw, unstructured daily or weekly obligations into a realistic, non-overlapping time-blocked execution sequence.',
       'Respect busyWindows strictly. Break complex tasks into 2-4 clear, concrete executionSteps and provide one practical simplificationNote that eliminates friction.',
       'Use 24-hour HH:MM timestamps. Return 2 to 6 focused blocks.',
+      'priority must be exactly one of the English words critical, high, standard — never translated.',
       langRule,
     ].join(' '),
     contents: JSON.stringify({

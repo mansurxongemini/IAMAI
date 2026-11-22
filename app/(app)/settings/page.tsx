@@ -94,12 +94,12 @@ export default function SettingsPage() {
           <div
             role="group"
             aria-label={dict.settings.languageTitle}
-            className="bg-canvas-2 rounded-none p-1 inline-flex items-center gap-1 self-start sm:self-center shrink-0"
+            className="bg-canvas-2 rounded-full p-1 inline-flex items-center gap-1 self-start sm:self-center shrink-0"
           >
             <button
               type="button"
               onClick={() => setLocale('en')}
-              className={`px-4 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                 locale === 'en' ? 'bg-accent text-on-accent' : 'text-muted hover:text-ink'
               }`}
             >
@@ -108,7 +108,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setLocale('uz')}
-              className={`px-4 py-1.5 rounded-none text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
                 locale === 'uz' ? 'bg-accent text-on-accent' : 'text-muted hover:text-ink'
               }`}
             >
@@ -198,7 +198,7 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-none bg-accent text-on-accent px-6 py-2.5 text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-full bg-accent text-on-accent px-6 py-2.5 text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-60 cursor-pointer"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
                 <span>{dict.settings.saveProfile}</span>
@@ -230,7 +230,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => void signOut()}
-                className="rounded-none border border-ink/15 px-5 py-2 text-xs font-medium text-ink hover:bg-accent hover:text-on-accent hover:border-accent transition-colors self-start sm:self-center shrink-0 cursor-pointer"
+                className="rounded-full border border-ink/15 px-5 py-2 text-xs font-medium text-ink hover:bg-accent hover:text-on-accent hover:border-accent transition-colors self-start sm:self-center shrink-0 cursor-pointer"
               >
                 {dict.settings.disconnect}
               </button>
@@ -238,7 +238,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => void handleGoogleConnect()}
-                className="rounded-none bg-accent px-5 py-2.5 text-xs font-medium text-on-accent hover:bg-accent/90 transition-colors self-start sm:self-center shrink-0 cursor-pointer"
+                className="rounded-full bg-accent px-5 py-2.5 text-xs font-medium text-on-accent hover:bg-accent/90 transition-colors self-start sm:self-center shrink-0 cursor-pointer"
               >
                 {dict.settings.connectGoogle}
               </button>

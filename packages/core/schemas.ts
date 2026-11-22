@@ -56,7 +56,13 @@ export const BlueprintSchema = z.object({
   archetypeLabel: BilingualTextSchema,
   recommendedWeeks: z.number().int().positive(),
   baselineTotalHours: z.number().positive(),
-  phases: z.array(BlueprintPhaseSchema).min(1),
+  /** The exam or format version this curriculum is written for, e.g. "TOEFL iBT (format of 21 Jan 2026)". */
+  examVersion: z.string().min(3).max(120),
+  /** Date (YYYY-MM-DD) the content was last checked against the sources below. */
+  lastVerified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** Official or primary sources the curriculum is built on (exam bodies, regulators, the format owner). */
+  sources: z.array(z.object({ label: z.string().min(2).max(160), url: z.string().url() })).min(2).max(12),
+  phases: z.array(BlueprintPhaseSchema).min(1).max(8),
 });
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 
@@ -84,6 +90,8 @@ export const AdaptRoadmapInputSchema = z.object({
   dailyHours: z.number().min(0.5).max(12),
   busyWindows: z.array(z.string().trim().min(1).max(100)).max(10).default([]),
   weakAreas: z.string().trim().max(300).optional(),
+  /** The learner's local calendar date (YYYY-MM-DD); the server clock is UTC and would start plans a day early east of UTC. */
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 export type AdaptRoadmapInput = z.infer<typeof AdaptRoadmapInputSchema>;
 

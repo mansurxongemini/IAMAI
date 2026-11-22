@@ -83,7 +83,7 @@ export function NodeTutorDrawer({
             type="button"
             onClick={onClose}
             aria-label={dict.common.close}
-            className="w-9 h-9 rounded-none border border-ink/12 flex items-center justify-center text-ink hover:bg-accent hover:text-on-accent hover:border-accent transition-colors shrink-0 cursor-pointer"
+            className="w-9 h-9 rounded-full border border-ink/12 flex items-center justify-center text-ink hover:bg-accent hover:text-on-accent hover:border-accent transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -166,13 +166,13 @@ export function NodeTutorDrawer({
               onChange={(e) => setQuestion(e.target.value)}
               placeholder={dict.roadmap.tutorPlaceholder}
               disabled={loading}
-              className="flex-1 rounded-none bg-canvas border border-ink/12 px-4 py-2.5 text-sm text-ink placeholder:text-muted focus:border-ink"
+              className="flex-1 rounded-full bg-canvas border border-ink/12 px-4 py-2.5 text-sm text-ink placeholder:text-muted focus:border-ink"
             />
             <button
               type="submit"
               disabled={loading || question.trim().length < 2}
               aria-label={dict.roadmap.tutorSend}
-              className="w-10 h-10 rounded-none bg-accent text-on-accent flex items-center justify-center hover:bg-accent/90 transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
+              className="w-10 h-10 rounded-full bg-accent text-on-accent flex items-center justify-center hover:bg-accent/90 transition-colors disabled:opacity-45 shrink-0 cursor-pointer"
             >
               <ArrowUp className="w-4 h-4" aria-hidden="true" />
             </button>

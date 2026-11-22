@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { DESK_SCENE } from '@/features/goals/photos';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Loader2 } from 'lucide-react';
@@ -49,9 +50,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-dvh grid lg:grid-cols-2">
-      {/* Photograph side (desktop) */}
+      {/* Artwork side (desktop) */}
       <div className="relative hidden lg:block">
-        <Image src="/photos/library.webp" alt={c.photoAlt} fill priority sizes="50vw" className="object-cover" />
+        <Image src={DESK_SCENE} alt={c.photoAlt} fill priority sizes="50vw" className="object-cover object-[center_70%]" />
         <span className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/20" aria-hidden="true" />
         <ul className="absolute left-10 bottom-10 right-10 space-y-3 text-white">
           {c.points.map((p) => (
@@ -73,7 +74,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setLocale(locale === 'en' ? 'uz' : 'en')}
-              className="h-11 min-w-11 px-3 rounded-none text-[13px] font-medium text-ink-2 hover:text-ink hover:bg-surface/70 transition-colors cursor-pointer"
+              className="h-11 min-w-11 px-3 rounded-full text-[13px] font-medium text-ink-2 hover:text-ink hover:bg-surface/70 transition-colors cursor-pointer"
               aria-label={getDictionary(locale).landing.lang}
             >
               {locale === 'en' ? 'UZ' : 'EN'}
@@ -92,7 +93,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => void handleGoogle()}
               disabled={loading}
-              className="mt-10 w-full h-14 inline-flex items-center justify-center gap-3 rounded-none bg-surface border border-ink/15 text-[16px] font-medium text-ink shadow-sm hover:border-ink/30 hover:shadow-md active:scale-[0.99] transition-[border-color,box-shadow,transform] disabled:opacity-60 cursor-pointer"
+              className="mt-10 w-full h-14 inline-flex items-center justify-center gap-3 rounded-full bg-surface border border-ink/15 text-[16px] font-medium text-ink shadow-sm hover:border-ink/30 hover:shadow-md active:scale-[0.99] transition-[border-color,box-shadow,transform] disabled:opacity-60 cursor-pointer"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> : <GoogleG />}
               {loading ? c.working : c.google}

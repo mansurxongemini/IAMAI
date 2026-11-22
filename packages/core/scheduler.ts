@@ -27,10 +27,24 @@ export function formatIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** A plan never asks for more than this multiple of the expert baseline; the rest of the budget stays free. */
+export const MAX_BUDGET_OVER_BASELINE = 2;
+/** The model's per-module hours are kept within this band around the module baseline. */
+const MODULE_WEIGHT_MIN = 0.4;
+const MODULE_WEIGHT_MAX = 3;
+
+/** Calendar day `n` days after a UTC-midnight `start` (plans are dated in whole days, never times). */
+const dayIso = (start: Date, n: number) => formatIsoDate(addDays(start, n));
+
 /**
  * Deterministic 0-token schedule engine.
- * Combines a pre-authored expert Blueprint with a lightweight Gemini Delta Patch
- * and allocates exact calendar dates, week ranges, and hour budgets inside the user's deadline.
+ * Combines a pre-authored expert Blueprint with a lightweight Gemini Delta Patch:
+ * - hours: the model's per-module hours are weights, clamped to 0.4–3x the module baseline; the plan
+ *   fills the user's budget (deadlineDays x dailyHours) but never more than 2x the blueprint's own
+ *   baseline, so a long deadline does not turn a 42-hour course into 4,000 hours;
+ * - dates: every active module gets a share of the deadline proportional to its hours, back to back,
+ *   inclusive start and end dates, none past the day before the deadline;
+ * - a patch that skips every module is ignored (an empty plan helps nobody).
  */
 export function applyDeltaPatchAndSchedule(params: {
   roadmapId: string;
@@ -41,123 +55,99 @@ export function applyDeltaPatchAndSchedule(params: {
   startDate?: Date;
 }): Roadmap {
   const { roadmapId, ownerId, blueprint, input, deltaPatch } = params;
-  const start = params.startDate ? new Date(params.startDate.getTime()) : new Date();
-  const nowIso = start.toISOString();
+  const now = params.startDate ? new Date(params.startDate.getTime()) : new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const nowIso = new Date().toISOString();
+  const D = Math.max(1, input.deadlineDays);
 
   const adjustmentMap = new Map<string, ModuleAdjustment>();
-  for (const adj of deltaPatch.moduleAdjustments) {
-    adjustmentMap.set(adj.moduleId, adj);
+  for (const adj of deltaPatch.moduleAdjustments) adjustmentMap.set(adj.moduleId, adj);
+
+  const allModules = blueprint.phases.flatMap((p) => p.modules);
+  const priorityOf = new Map<string, PriorityLevel>();
+  for (const mod of allModules) priorityOf.set(mod.id, adjustmentMap.get(mod.id)?.priority ?? 'normal');
+  // A patch that skips everything is treated as no patch at all.
+  if (allModules.every((m) => priorityOf.get(m.id) === 'skip')) {
+    for (const mod of allModules) priorityOf.set(mod.id, 'normal');
   }
 
-  const totalBudgetHours = Math.max(4, Number((input.deadlineDays * input.dailyHours).toFixed(1)));
-
-  // First pass: gather raw requested/baseline hours for non-skipped modules
-  const rawModuleHours = new Map<string, number>();
-  let rawSum = 0;
-
-  for (const phase of blueprint.phases) {
-    for (const mod of phase.modules) {
-      const adj = adjustmentMap.get(mod.id);
-      const priority: PriorityLevel = adj?.priority ?? 'normal';
-      if (priority === 'skip') {
-        rawModuleHours.set(mod.id, 0);
-        continue;
-      }
-
-      let baseWeight = adj && adj.allocatedHours > 0 ? adj.allocatedHours : mod.baselineHours;
-      if (priority === 'high' && (!adj || adj.allocatedHours <= 0)) {
-        baseWeight = mod.baselineHours * 1.25;
-      } else if (priority === 'low' && (!adj || adj.allocatedHours <= 0)) {
-        baseWeight = mod.baselineHours * 0.7;
-      }
-      rawModuleHours.set(mod.id, baseWeight);
-      rawSum += baseWeight;
+  // Relative weights per active module.
+  const weight = new Map<string, number>();
+  let weightSum = 0;
+  let activeBaseline = 0;
+  for (const mod of allModules) {
+    const priority = priorityOf.get(mod.id)!;
+    if (priority === 'skip') continue;
+    const adj = adjustmentMap.get(mod.id);
+    let w: number;
+    if (adj && adj.priority !== 'skip' && adj.allocatedHours > 0) {
+      w = Math.min(mod.baselineHours * MODULE_WEIGHT_MAX, Math.max(mod.baselineHours * MODULE_WEIGHT_MIN, adj.allocatedHours));
+    } else {
+      w = mod.baselineHours * (priority === 'high' ? 1.25 : priority === 'low' ? 0.7 : 1);
     }
+    weight.set(mod.id, w);
+    weightSum += w;
+    activeBaseline += mod.baselineHours;
   }
 
-  // Ensure at least one module stays active if patch skipped everything accidentally
-  if (rawSum <= 0) {
-    for (const phase of blueprint.phases) {
-      for (const mod of phase.modules) {
-        rawModuleHours.set(mod.id, mod.baselineHours);
-        rawSum += mod.baselineHours;
-      }
-    }
-  }
+  const budgetHours = D * input.dailyHours;
+  const plannedHours = Math.min(budgetHours, activeBaseline * MAX_BUDGET_OVER_BASELINE);
 
-  // Scale hours proportionally so total fits cleanly inside the user's real hour budget
-  const scaleFactor = totalBudgetHours / rawSum;
-
-  let cursorDayOffset = 0;
+  // Hours and back-to-back day ranges, proportional to weight.
+  let cumulative = 0;
   let totalAllocatedHours = 0;
+  const slot = new Map<string, { hours: number; from: number; to: number }>();
+  for (const mod of allModules) {
+    const w = weight.get(mod.id);
+    if (w === undefined) continue;
+    const from = Math.min(D - 1, Math.round((cumulative / weightSum) * D));
+    cumulative += w;
+    const toExclusive = Math.min(D, Math.max(from + 1, Math.round((cumulative / weightSum) * D)));
+    const hours = Math.max(0.5, Number(((w / weightSum) * plannedHours).toFixed(1)));
+    totalAllocatedHours = Number((totalAllocatedHours + hours).toFixed(1));
+    slot.set(mod.id, { hours, from, to: toExclusive - 1 });
+  }
 
+  let lastDay = 0;
   const scheduledPhases: RoadmapPhase[] = blueprint.phases.map((phase) => {
-    const phaseStartOffset = cursorDayOffset;
     const modules: RoadmapNode[] = phase.modules.map((mod) => {
       const adj = adjustmentMap.get(mod.id);
-      const priority: PriorityLevel = adj?.priority ?? 'normal';
-      const rawHours = rawModuleHours.get(mod.id) ?? 0;
-
-      if (priority === 'skip' || rawHours <= 0) {
-        const markerDate = formatIsoDate(addDays(start, Math.min(cursorDayOffset, input.deadlineDays)));
-        return {
-          id: mod.id,
-          title: mod.title,
-          summary: mod.summary,
-          difficulty: mod.difficulty,
-          keyFramework: mod.keyFramework,
-          priority: 'skip',
-          allocatedHours: 0,
-          customFocus: adj?.customFocus,
-          startDate: markerDate,
-          endDate: markerDate,
-          weekRange: '—',
-          steps: mod.steps.map((step) => ({
-            ...step,
-            completed: true,
-          })),
-        };
-      }
-
-      const scaledHours = Math.max(1, Number((rawHours * scaleFactor).toFixed(1)));
-      totalAllocatedHours = Number((totalAllocatedHours + scaledHours).toFixed(1));
-
-      const spanDays = Math.max(1, Math.round(scaledHours / Math.max(0.5, input.dailyHours)));
-      const modStartOffset = Math.min(cursorDayOffset, Math.max(0, input.deadlineDays - 1));
-      const modEndOffset = Math.min(input.deadlineDays, modStartOffset + spanDays);
-      cursorDayOffset = modEndOffset;
-
-      const startWeek = Math.floor(modStartOffset / 7) + 1;
-      const endWeek = Math.max(startWeek, Math.floor(Math.max(0, modEndOffset - 1) / 7) + 1);
-      const weekRange = startWeek === endWeek ? `W${startWeek}` : `W${startWeek}–W${endWeek}`;
-
-      return {
+      const s = slot.get(mod.id);
+      const base = {
         id: mod.id,
         title: mod.title,
         summary: mod.summary,
         difficulty: mod.difficulty,
         keyFramework: mod.keyFramework,
-        priority,
-        allocatedHours: scaledHours,
         customFocus: adj?.customFocus,
-        startDate: formatIsoDate(addDays(start, modStartOffset)),
-        endDate: formatIsoDate(addDays(start, modEndOffset)),
-        weekRange,
-        steps: mod.steps.map((step) => ({
-          ...step,
-          completed: false,
-        })),
+      };
+      if (!s) {
+        const marker = dayIso(start, Math.min(lastDay, D - 1));
+        return { ...base, priority: 'skip' as const, allocatedHours: 0, startDate: marker, endDate: marker, weekRange: '—', steps: mod.steps.map((step) => ({ ...step, completed: true })) };
+      }
+      lastDay = s.to;
+      const startWeek = Math.floor(s.from / 7) + 1;
+      const endWeek = Math.floor(s.to / 7) + 1;
+      return {
+        ...base,
+        priority: priorityOf.get(mod.id)!,
+        allocatedHours: s.hours,
+        startDate: dayIso(start, s.from),
+        endDate: dayIso(start, s.to),
+        weekRange: startWeek === endWeek ? `W${startWeek}` : `W${startWeek}–W${endWeek}`,
+        steps: mod.steps.map((step) => ({ ...step, completed: false })),
       };
     });
-
-    const phaseEndOffset = Math.max(phaseStartOffset + 1, cursorDayOffset);
+    const active = phase.modules.map((m) => slot.get(m.id)).filter((x): x is { hours: number; from: number; to: number } => Boolean(x));
+    const from = active.length ? Math.min(...active.map((x) => x.from)) : Math.min(lastDay, D - 1);
+    const to = active.length ? Math.max(...active.map((x) => x.to)) : from;
     return {
       id: phase.id,
       order: phase.order,
       title: phase.title,
       objective: phase.objective,
-      startDate: formatIsoDate(addDays(start, Math.min(phaseStartOffset, input.deadlineDays))),
-      endDate: formatIsoDate(addDays(start, Math.min(phaseEndOffset, input.deadlineDays))),
+      startDate: dayIso(start, from),
+      endDate: dayIso(start, to),
       modules,
     };
   });
@@ -171,8 +161,8 @@ export function applyDeltaPatchAndSchedule(params: {
     locale: input.locale,
     currentLevel: input.currentLevel,
     targetGoal: input.targetGoal,
-    deadlineDate: formatIsoDate(addDays(start, input.deadlineDays)),
-    deadlineDays: input.deadlineDays,
+    deadlineDate: dayIso(start, D),
+    deadlineDays: D,
     dailyHours: input.dailyHours,
     totalAllocatedHours,
     strategySummary: deltaPatch.strategySummary,
@@ -182,6 +172,31 @@ export function applyDeltaPatchAndSchedule(params: {
     createdAt: nowIso,
     updatedAt: nowIso,
   };
+}
+
+/** Minutes a day the plan actually asks for (≤ the user's daily hours when the budget was capped). */
+export function plannedDailyMinutes(roadmap: Roadmap): number {
+  const perDay = (roadmap.totalAllocatedHours / Math.max(1, roadmap.deadlineDays)) * 60;
+  return Math.max(15, Math.round(Math.min(roadmap.dailyHours * 60, perDay) / 5) * 5);
+}
+
+export type Feasibility =
+  | { status: 'ok' }
+  /** The budget is well below what the expert curriculum needs: daily hours that would cover ~80% of it. */
+  | { status: 'tight'; budgetHours: number; baselineHours: number; suggestedDailyHours: number }
+  /** More time than the curriculum can use: the plan asks for less per day than offered. */
+  | { status: 'light'; plannedDailyMinutes: number };
+
+/** How realistic the user's budget is against the blueprint's baseline hours. */
+export function assessFeasibility(roadmap: Roadmap, baselineTotalHours: number): Feasibility {
+  const budget = roadmap.deadlineDays * roadmap.dailyHours;
+  if (budget < baselineTotalHours * 0.6) {
+    const suggested = Math.min(12, Math.ceil(((baselineTotalHours * 0.8) / roadmap.deadlineDays) * 2) / 2);
+    return { status: 'tight', budgetHours: Math.round(budget), baselineHours: baselineTotalHours, suggestedDailyHours: suggested };
+  }
+  const planned = plannedDailyMinutes(roadmap);
+  if (planned < roadmap.dailyHours * 60 * 0.85) return { status: 'light', plannedDailyMinutes: planned };
+  return { status: 'ok' };
 }
 
 export function computeRoadmapProgress(roadmap: Roadmap): RoadmapProgress {
@@ -272,34 +287,66 @@ export function computeNodeCacheHash(
   return `${blueprintId}_${nodeId}_${locale}_${hex}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
 }
 
+const words = (t: string) =>
+  t
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯʻʼ‘’']/g, '')
+    .split(/[^a-z0-9Ѐ-ӿ]+/)
+    .filter((w) => w.length >= 4);
+
+const clock = (minutes: number) => `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+/** A realistic daily window: evenings for short days, a morning + evening split for long ones. */
+export function suggestDailySlot(dailyHours: number, locale: 'en' | 'uz'): string {
+  const total = Math.round(dailyHours * 60);
+  if (total <= 240) {
+    const from = 19 * 60;
+    return locale === 'uz' ? `${clock(from)}–${clock(from + total)} (${dailyHours} soat chuqur fokus)` : `${clock(from)}–${clock(from + total)} (${dailyHours}h focus block)`;
+  }
+  const morning = Math.ceil(total / 2 / 15) * 15;
+  const evening = total - morning;
+  const a = `${clock(8 * 60)}–${clock(8 * 60 + morning)}`;
+  const b = `${clock(17 * 60)}–${clock(17 * 60 + evening)}`;
+  return locale === 'uz' ? `${a} va ${b} (jami ${dailyHours} soat, ikki blok)` : `${a} and ${b} (${dailyHours}h in two blocks)`;
+}
+
 /**
- * Builds a deterministic initial delta patch strictly for local seed/demo records.
- * Never used to silently mask live Gemini API errors.
+ * Deterministic delta patch used when the model is unavailable. It still reads the learner's own
+ * words: modules whose title, summary or framework match the weak areas get priority, and nothing
+ * else is guessed.
  */
 export function buildSeedDeltaPatch(blueprint: Blueprint, input: AdaptRoadmapInput): GeminiDeltaPatch {
-  const budget = Math.round(input.deadlineDays * input.dailyHours);
   const allModules = blueprint.phases.flatMap((p) => p.modules);
-  const perModule = Math.max(2, Math.round(budget / Math.max(1, allModules.length)));
+  const weak = new Set(words(`${input.weakAreas ?? ''}`));
+  const matches = (mod: (typeof allModules)[number]) =>
+    words(`${mod.title.en} ${mod.title.uz} ${mod.summary.en} ${mod.summary.uz} ${mod.keyFramework}`).some((w) =>
+      [...weak].some((x) => w.startsWith(x.slice(0, 5)) || x.startsWith(w.slice(0, 5)))
+    );
 
-  const adjustments: ModuleAdjustment[] = allModules.map((mod, idx) => ({
-    moduleId: mod.id,
-    priority: idx === 1 || idx === 2 ? 'high' : 'normal',
-    allocatedHours: idx === 1 || idx === 2 ? Math.round(perModule * 1.25) : perModule,
-    customFocus:
-      input.locale === 'uz'
-        ? `${input.targetGoal} maqsadi uchun ${mod.keyFramework} doirasida amaliy mashqlarga ustuvorlik beriladi.`
-        : `Prioritize deliberate drills inside ${mod.keyFramework} calibrated for ${input.targetGoal}.`,
-  }));
+  const adjustments: ModuleAdjustment[] = allModules.map((mod) => {
+    const high = weak.size > 0 && matches(mod);
+    return {
+      moduleId: mod.id,
+      priority: high ? 'high' : 'normal',
+      allocatedHours: Number((mod.baselineHours * (high ? 1.4 : 1)).toFixed(1)),
+      customFocus:
+        input.locale === 'uz'
+          ? high
+            ? `Zaif tomon sifatida belgilangan: ${mod.keyFramework} boʻyicha mashqlar koʻpaytiriladi.`
+            : `${mod.keyFramework} boʻyicha mutaxassis rejasi asosida.`
+          : high
+            ? `Flagged as a weak area: extra drills in ${mod.keyFramework}.`
+            : `Follows the expert plan for ${mod.keyFramework}.`,
+    };
+  });
 
   return {
     strategySummary:
       input.locale === 'uz'
-        ? `${input.deadlineDays} kunlik intensiv reja (${input.dailyHours} soat/kun): ${input.currentLevel} darajadan ${input.targetGoal} maqsadiga bosqichma-bosqich yetish.`
-        : `${input.deadlineDays}-day structured cadence (${input.dailyHours}h/day): targeted progression from ${input.currentLevel} to ${input.targetGoal}.`,
+        ? `${input.deadlineDays} kunlik reja (${input.dailyHours} soat/kun): ${input.currentLevel} darajadan ${input.targetGoal} maqsadiga mutaxassislar tartibida.`
+        : `${input.deadlineDays}-day plan (${input.dailyHours}h/day): from ${input.currentLevel} to ${input.targetGoal} in the expert order.`,
     moduleAdjustments: adjustments,
-    dailySlotRecommendation:
-      input.locale === 'uz'
-        ? `19:00–${19 + Math.floor(input.dailyHours)}:${input.dailyHours % 1 >= 0.5 ? '30' : '00'} (${input.dailyHours} soat chuqur fokus)`
-        : `19:00–${19 + Math.floor(input.dailyHours)}:${input.dailyHours % 1 >= 0.5 ? '30' : '00'} (${input.dailyHours}h uninterrupted focus block)`,
+    dailySlotRecommendation: suggestDailySlot(input.dailyHours, input.locale),
   };
 }

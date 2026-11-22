@@ -2,10 +2,11 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
+import { DESK_SCENE } from '@/features/goals/photos';
 import Link from 'next/link';
 import { ArrowRight, Check, Flame, ListChecks, MessageSquare, Plus } from 'lucide-react';
-import type { Roadmap, RoadmapStep } from '@core/schemas';
 import { computeRoadmapProgress } from '@core/scheduler';
+import { planForDay } from '@core/today';
 import { useWorkspace } from '@/components/WorkspaceProvider';
 import { ProgressRing } from '@/components/ProgressRing';
 import { AppShell } from '@/components/AppShell';
@@ -16,33 +17,8 @@ import { SkeletonLines } from '@/components/Skeleton';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { localDay, useActivity } from './activity';
+import { localDay, recordCompletion, useActivity } from './activity';
 import { getDictionary } from '@core/i18n';
-
-interface TodayItem {
-  moduleId: string;
-  step: RoadmapStep;
-}
-
-/** Today's batch: steps finished today (stay visible) + next open steps up to the daily time budget. */
-function todaysBatch(rm: Roadmap, todayIds: Set<string>): TodayItem[] {
-  const budget = Math.max(30, rm.dailyHours * 60);
-  const out: TodayItem[] = [];
-  let used = 0;
-  for (const ph of rm.phases) {
-    for (const mod of ph.modules) {
-      if (mod.priority === 'skip') continue;
-      for (const step of mod.steps) {
-        const doneToday = todayIds.has(`step:${rm.id}:${step.id}`);
-        if (step.completed && !doneToday) continue;
-        if (!step.completed && used >= budget) continue;
-        out.push({ moduleId: mod.id, step });
-        used += step.estimatedMinutes;
-      }
-    }
-  }
-  return out.slice(0, 6);
-}
 
 const daysUntil = (iso: string) => Math.max(0, Math.ceil((new Date(`${iso}T23:59:59`).getTime() - Date.now()) / 86_400_000));
 
@@ -93,7 +69,7 @@ export function TodayView() {
         actions={
           <>
             <span className="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-[12px] text-ink-2" title={streak > 0 ? c.streak(streak) : c.noStreak}>
-              <Flame className={cn('w-3.5 h-3.5', streak > 0 ? 'text-[#C2410C]' : 'text-muted/60')} aria-hidden="true" />
+              <Flame className={cn('w-3.5 h-3.5', streak > 0 ? 'text-[var(--h-sun)]' : 'text-muted/60')} aria-hidden="true" />
               <span className="font-mono-tabular">{streak}</span>
             </span>
             <BarButton primary onClick={() => router.push('/goals')}><Plus aria-hidden="true" /> {c.newPlan}</BarButton>
@@ -126,7 +102,7 @@ export function TodayView() {
           ) : active.length === 0 ? (
             <Card className="overflow-hidden grid grid-cols-1 md:grid-cols-2">
               <div className="relative min-h-[220px] md:min-h-[340px]">
-                <Image src="/photos/library.webp" alt={d.photos.library} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+                <Image src={DESK_SCENE} alt={d.photos.library} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover object-[center_75%]" />
               </div>
               <div className="p-8 sm:p-10 flex flex-col justify-center items-start gap-5">
                 <h2 className="text-[28px] sm:text-[34px] leading-[1.05] font-medium tracking-[-0.03em] text-ink">{c.emptyTitle}</h2>
@@ -139,9 +115,11 @@ export function TodayView() {
           ) : (
             <div ref={listRef} className="space-y-6">
               {active.map((rm) => {
-                const items = todaysBatch(rm, todayIds);
+                const items = planForDay(rm, today, todayIds);
                 const progress = computeRoadmapProgress(rm);
-                const done = items.filter((i) => i.step.completed).length;
+                const isDone = (it: (typeof items)[number]) => (it.kind === 'step' ? it.step.completed : todayIds.has(it.id));
+                const done = items.filter(isDone).length;
+                const hasStep = items.some((i) => i.kind === 'step');
                 return (
                   <section key={rm.id} aria-label={rm.title[locale]} className="rounded-2xl border border-ink/[0.07] bg-surface overflow-hidden">
                     <div className="flex items-center gap-3 h-11 px-4 bg-surface-2 border-b border-ink/[0.06]">
@@ -152,24 +130,34 @@ export function TodayView() {
                         {c.progressToday(done, items.length)} · {daysUntil(rm.deadlineDate)} {c.daysLeft}
                       </span>
                     </div>
-                    {items.length > 0 && done === items.length && (
+                    {items.length > 0 && done === items.length ? (
                       <p className="px-4 py-2.5 text-[13px] text-success border-b border-ink/[0.06] ts-arrive">{c.allDone}</p>
-                    )}
+                    ) : items.length > 0 && !hasStep ? (
+                      <p className="px-4 py-2.5 text-[13px] text-muted border-b border-ink/[0.06]">{c.nothingDue}</p>
+                    ) : null}
                     <ul>
-                      {items.map(({ moduleId, step }) => (
+                      {items.map((it) => {
+                        const { step, moduleId } = it;
+                        const checked = isDone(it);
+                        const title = it.kind === 'practice' ? `${c.practice} · ${step.title[locale]}` : step.title[locale];
+                        const toggle = () => (it.kind === 'step' ? void toggleStep(rm.id, moduleId, step.id) : recordCompletion(it.id, !checked));
+                        return (
                         <li
-                          key={step.id}
+                          key={it.id}
                           data-row
                           tabIndex={0}
                           className="group flex items-center gap-3 min-h-11 px-4 py-2 border-b border-ink/[0.05] last:border-0 hover:bg-ink/[0.025] transition-colors"
                         >
-                          <StatusButton done={step.completed} label={step.title[locale]} onToggle={() => void toggleStep(rm.id, moduleId, step.id)} />
+                          <StatusButton done={checked} label={title} onToggle={toggle} />
                           <div className="flex-1 min-w-0">
-                            <p className={cn('text-[14px] truncate', step.completed ? 'text-muted line-through decoration-ink/25' : 'text-ink')}>{step.title[locale]}</p>
-                            {!step.completed && <p className="text-[12px] text-muted truncate">{step.drill[locale]}</p>}
+                            <p className={cn('text-[14px] truncate', checked ? 'text-muted line-through decoration-ink/25' : 'text-ink')}>
+                              {it.overdue && !checked && <span className="mr-1.5 rounded-full bg-warn/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-warn">{c.overdue}</span>}
+                              {title}
+                            </p>
+                            {!checked && <p className="text-[12px] text-muted truncate">{step.drill[locale]}</p>}
                           </div>
                           <span className="hidden sm:inline text-[11px] text-muted font-mono-tabular px-1.5 py-0.5 rounded-md bg-ink/[0.04] shrink-0">{step.framework}</span>
-                          <span className="text-[12px] text-muted font-mono-tabular w-12 text-right shrink-0">{step.estimatedMinutes} {c.minutes}</span>
+                          <span className="text-[12px] text-muted font-mono-tabular w-12 text-right shrink-0">{it.minutes} {c.minutes}</span>
                           <Link
                             href={`/plan/${rm.id}?ask=${step.id}`}
                             data-open
@@ -180,7 +168,8 @@ export function TodayView() {
                             <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
                           </Link>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   </section>
                 );

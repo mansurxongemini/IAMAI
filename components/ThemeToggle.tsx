@@ -19,7 +19,7 @@ export function ThemeToggle({ locale, className }: { locale: 'en' | 'uz'; classN
       onClick={() => set(next)}
       aria-label={getDictionary(locale).theme.toggle[choice]}
       title={getDictionary(locale).theme.toggle[choice]}
-      className={cn('h-11 w-11 grid place-items-center rounded-none text-muted hover:text-ink hover:bg-surface/70 transition-colors cursor-pointer', className)}
+      className={cn('h-11 w-11 grid place-items-center rounded-full text-muted hover:text-ink hover:bg-surface/70 transition-colors cursor-pointer', className)}
     >
       <Icon className="w-[18px] h-[18px]" aria-hidden="true" />
     </button>
@@ -32,7 +32,7 @@ export function ThemeSegmented({ locale }: { locale: 'en' | 'uz' }) {
   const t = getDictionary(locale).theme;
   const names = t.names;
   return (
-    <div role="radiogroup" aria-label={t.group} className="inline-flex rounded-none bg-surface border border-ink/10 p-1 gap-1">
+    <div role="radiogroup" aria-label={t.group} className="inline-flex rounded-full bg-surface border border-ink/10 p-1 gap-1">
       {ORDER.map((o) => {
         const Icon = ICON[o];
         const on = o === choice;
@@ -43,7 +43,7 @@ export function ThemeSegmented({ locale }: { locale: 'en' | 'uz' }) {
             role="radio"
             aria-checked={on}
             onClick={() => set(o)}
-            className={cn('h-10 px-4 rounded-none inline-flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer', on ? 'bg-accent text-on-accent' : 'text-muted hover:text-ink')}
+            className={cn('h-10 px-4 rounded-full inline-flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer', on ? 'bg-accent text-on-accent' : 'text-muted hover:text-ink')}
           >
             <Icon className="w-4 h-4" aria-hidden="true" /> {names[o]}
           </button>
