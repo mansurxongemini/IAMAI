@@ -30,10 +30,10 @@ export class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center px-6 bg-[#F4F1EC] text-[#1C1C1A]">
+        <div className="min-h-screen flex items-center justify-center px-6 bg-canvas text-ink">
           <div className="glass-surface max-w-lg w-full rounded-3xl p-8 space-y-5">
             <h1 className="font-editorial text-3xl tracking-tight">Workspace Interrupted</h1>
-            <p className="text-sm text-[#6A6760] leading-relaxed break-words">
+            <p className="text-sm text-muted leading-relaxed break-words">
               {this.state.message}
             </p>
             <button
@@ -44,7 +44,7 @@ export class ErrorBoundary extends React.Component<
                   window.location.reload();
                 }
               }}
-              className="inline-flex items-center justify-center rounded-full bg-[#1C1C1A] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#32322F] transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center rounded-none bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent/90 transition-colors cursor-pointer"
             >
               Reload Workspace
             </button>

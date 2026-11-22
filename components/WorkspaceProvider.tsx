@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { getDictionary, type Dictionary } from '@core/i18n';
 import { computeNodeCacheHash, toggleRoadmapStep } from '@core/scheduler';
 import type {
@@ -12,24 +12,10 @@ import type {
   Roadmap,
   UserProfile,
 } from '@core/schemas';
-import { createSeedRoadmaps, createSeedTasks, DEFAULT_USER_PROFILE } from '@core/seed';
-import { auth, signInWithGoogle, signOutAccount, testConnection } from '@/lib/firebase';
-import {
-  archiveRoadmapDoc,
-  createRoadmapDoc,
-  createTaskDoc,
-  deleteTaskDoc,
-  ensureUserProfileDoc,
-  getBlueprintCacheDoc,
-  saveNodeThreadDoc,
-  subscribeRoadmaps,
-  subscribeTasks,
-  subscribeUserProfile,
-  toggleTaskDoc,
-  updateRoadmapProgressDoc,
-  updateUserProfileDoc,
-  writeBlueprintCacheDoc,
-} from '@/lib/firestore-repo';
+import { DEFAULT_USER_PROFILE } from '@core/defaults';
+import { loadCloud } from '@/lib/cloud';
+import { apiPost } from '@/lib/api-client';
+import { recordCompletion } from '@/features/today/activity';
 
 const STORAGE_KEYS = {
   profile: 'iam_ai_profile_v1',
@@ -42,6 +28,8 @@ const STORAGE_KEYS = {
 interface WorkspaceContextValue {
   user: User | null;
   authReady: boolean;
+  /** True once the local cache has been read; render skeletons before this. */
+  hydrated: boolean;
   isOnline: boolean;
   profile: UserProfile;
   locale: Locale;
@@ -112,8 +100,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
-  const [roadmaps, setRoadmaps] = useState<Roadmap[]>(() => createSeedRoadmaps());
-  const [tasks, setTasks] = useState<DailyTask[]>(() => createSeedTasks());
+  const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
+  const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [nodeThreads, setNodeThreads] = useState<Record<string, NodeChatMessage[]>>({});
   const [mentorMessages, setMentorMessages] =
     useState<Record<MentorRole, NodeChatMessage[]>>(EMPTY_MENTOR_THREADS);
@@ -129,9 +117,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (storedProfile) setProfile(storedProfile);
 
       const storedRoadmaps = safeReadJson<Roadmap[] | null>(STORAGE_KEYS.roadmaps, null);
-      if (storedRoadmaps && storedRoadmaps.length > 0) setRoadmaps(storedRoadmaps);
-
       const storedTasks = safeReadJson<DailyTask[] | null>(STORAGE_KEYS.tasks, null);
+      const hasRoadmaps = Boolean(storedRoadmaps && storedRoadmaps.length > 0);
+      if (storedRoadmaps && hasRoadmaps) setRoadmaps(storedRoadmaps);
       if (storedTasks) setTasks(storedTasks);
 
       const storedThreads = safeReadJson<Record<string, NodeChatMessage[]>>(
@@ -147,6 +135,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setMentorMessages({ ...EMPTY_MENTOR_THREADS, ...storedMentor });
 
       setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
+      // New visitors start empty and go through goal onboarding (no demo data).
       setHydrated(true);
     });
 
@@ -154,8 +143,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    void testConnection();
 
     return () => {
       active = false;
@@ -192,11 +179,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   // Firebase Auth listener + real-time Firestore subscriptions when authenticated
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setAuthReady(true);
-    });
-    return () => unsubAuth();
+    let unsubAuth: (() => void) | undefined;
+    let cancelled = false;
+    const start = () =>
+      void loadCloud().then((c) => {
+        if (cancelled) return;
+        unsubAuth = c.watchAuth((firebaseUser) => {
+          setUser(firebaseUser);
+          setAuthReady(true);
+        });
+      });
+    // Sign-in is required for the app, so the auth SDK starts at once (still code-split).
+    start();
+    return () => {
+      cancelled = true;
+      unsubAuth?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -215,32 +213,36 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       updatedAt: new Date().toISOString(),
     };
 
-    void ensureUserProfileDoc(initialProfile).catch(() => {
-      // Non-blocking on initial offline boot
-    });
+    let cancelled = false;
+    const unsubs: Array<() => void> = [];
+    void loadCloud().then((c) => {
+      if (cancelled) return;
+      void c.ensureUserProfileDoc(initialProfile).catch(() => {
+        // Non-blocking on initial offline boot
+      });
 
-    const unsubProfile = subscribeUserProfile(user.uid, (remoteProfile) => {
+    unsubs.push(c.subscribeUserProfile(user.uid, (remoteProfile) => {
       if (remoteProfile) {
         setProfile(remoteProfile);
       }
-    });
+    }));
 
-    const unsubRoadmaps = subscribeRoadmaps(user.uid, (remoteRoadmaps) => {
+    unsubs.push(c.subscribeRoadmaps(user.uid, (remoteRoadmaps) => {
       if (remoteRoadmaps.length > 0) {
         setRoadmaps(remoteRoadmaps);
       }
-    });
+    }));
 
-    const unsubTasks = subscribeTasks(user.uid, (remoteTasks) => {
+    unsubs.push(c.subscribeTasks(user.uid, (remoteTasks) => {
       if (remoteTasks.length > 0) {
         setTasks(remoteTasks);
       }
+    }));
     });
 
     return () => {
-      unsubProfile();
-      unsubRoadmaps();
-      unsubTasks();
+      cancelled = true;
+      unsubs.forEach((u) => u());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, user]);
@@ -250,11 +252,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setProfile((prev) => {
         const updated = { ...prev, locale: next, updatedAt: new Date().toISOString() };
         if (user) {
-          void updateUserProfileDoc(user.uid, updated).catch(() => {});
+          void loadCloud().then((c) => c.updateUserProfileDoc(user.uid, updated)).catch(() => {});
         }
         return updated;
       });
 
+      void import('@core/seed').then(({ createSeedRoadmaps, createSeedTasks }) => {
       const localizedSeeds = createSeedRoadmaps(user?.uid ?? 'local-executive', next);
       const seedRoadmapMap = new Map(localizedSeeds.map((r) => [r.id, r]));
       setRoadmaps((prev) =>
@@ -292,6 +295,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           };
         })
       );
+      });
     },
     [user]
   );
@@ -310,7 +314,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       };
       setProfile(next);
       if (user) {
-        await updateUserProfileDoc(user.uid, updates);
+        await (await loadCloud()).updateUserProfileDoc(user.uid, updates);
       }
     },
     [profile, user]
@@ -321,7 +325,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const owned: Roadmap = user ? { ...roadmap, ownerId: user.uid } : roadmap;
       setRoadmaps((prev) => [owned, ...prev.filter((r) => r.id !== owned.id)]);
       if (user) {
-        await createRoadmapDoc(user.uid, owned);
+        await (await loadCloud()).createRoadmapDoc(user.uid, owned);
       }
     },
     [user]
@@ -333,6 +337,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setRoadmaps((prev) =>
         prev.map((rm) => {
           if (rm.id !== roadmapId) return rm;
+          const wasDone = rm.phases.some((ph) =>
+            ph.modules.some((m) => m.id === moduleId && m.steps.some((st) => st.id === stepId && st.completed))
+          );
+          recordCompletion(`step:${roadmapId}:${stepId}`, !wasDone);
           const next = toggleRoadmapStep(rm, moduleId, stepId);
           updatedTarget = next;
           return next;
@@ -340,7 +348,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       );
       if (user && updatedTarget) {
         const target = updatedTarget as Roadmap;
-        await updateRoadmapProgressDoc(user.uid, roadmapId, target.phases, target.status);
+        await (await loadCloud()).updateRoadmapProgressDoc(user.uid, roadmapId, target.phases, target.status);
       }
     },
     [user]
@@ -356,7 +364,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         )
       );
       if (user) {
-        await archiveRoadmapDoc(user.uid, roadmapId);
+        await (await loadCloud()).archiveRoadmapDoc(user.uid, roadmapId);
       }
     },
     [user]
@@ -370,7 +378,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return merged.sort((a, b) => a.startTime.localeCompare(b.startTime));
       });
       if (user) {
-        await Promise.all(normalized.map((t) => createTaskDoc(user.uid, t)));
+        await loadCloud().then((c) => Promise.all(normalized.map((t) => c.createTaskDoc(user.uid, t))));
       }
     },
     [user]
@@ -383,11 +391,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         prev.map((t) => {
           if (t.id !== taskId) return t;
           nextCompleted = !t.completed;
+          recordCompletion(`task:${taskId}`, nextCompleted);
           return { ...t, completed: nextCompleted, updatedAt: new Date().toISOString() };
         })
       );
       if (user) {
-        await toggleTaskDoc(user.uid, taskId, nextCompleted);
+        await (await loadCloud()).toggleTaskDoc(user.uid, taskId, nextCompleted);
       }
     },
     [user]
@@ -397,7 +406,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const completedIds = tasks.filter((t) => t.completed).map((t) => t.id);
     setTasks((prev) => prev.filter((t) => !t.completed));
     if (user && completedIds.length > 0) {
-      await Promise.all(completedIds.map((id) => deleteTaskDoc(user.uid, id)));
+      await loadCloud().then((c) => Promise.all(completedIds.map((id) => c.deleteTaskDoc(user.uid, id))));
     }
   }, [tasks, user]);
 
@@ -430,7 +439,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         params.question
       );
       if (user && existingThread.length === 0) {
-        const cachedAnswer = await getBlueprintCacheDoc(nodeHash);
+        const cachedAnswer = await (await loadCloud()).getBlueprintCacheDoc(nodeHash);
         if (cachedAnswer) {
           const cachedMsg: NodeChatMessage = {
             id: `msg_a_${Date.now().toString(36)}`,
@@ -441,17 +450,14 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           };
           const nextMsgs = [...optimistic, cachedMsg];
           setNodeThreads((prev) => ({ ...prev, [threadKey]: nextMsgs }));
-          void saveNodeThreadDoc(user.uid, params.roadmap.id, params.nodeId, nextMsgs).catch(
-            () => {}
-          );
+          void loadCloud()
+            .then((c) => c.saveNodeThreadDoc(user.uid, params.roadmap.id, params.nodeId, nextMsgs))
+            .catch(() => {});
           return cachedMsg;
         }
       }
 
-      const res = await fetch('/api/tutor/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { ok: resOk, data } = await apiPost('/api/tutor/chat', {
           blueprintId: params.roadmap.blueprintId,
           nodeId: params.nodeId,
           nodeTitle: params.nodeTitle,
@@ -465,11 +471,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             role: m.role,
             content: m.content,
           })),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
+        });
+      if (!resOk) {
         throw new Error(data.error || 'Failed to get AI Tutor response.');
       }
 
@@ -484,18 +487,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setNodeThreads((prev) => ({ ...prev, [threadKey]: nextMsgs }));
 
       if (user) {
-        void saveNodeThreadDoc(user.uid, params.roadmap.id, params.nodeId, nextMsgs).catch(
-          () => {}
-        );
+        void loadCloud()
+          .then((c) => c.saveNodeThreadDoc(user.uid, params.roadmap.id, params.nodeId, nextMsgs))
+          .catch(() => {});
         if (existingThread.length === 0) {
-          void writeBlueprintCacheDoc({
+          void loadCloud().then((c) => c.writeBlueprintCacheDoc({
             nodeHash,
             blueprintId: params.roadmap.blueprintId,
             nodeId: params.nodeId,
             locale: profile.locale,
             answer: assistantMsg.content,
             uid: user.uid,
-          });
+          })).catch(() => {});
         }
       }
 
@@ -516,19 +519,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const optimistic = [...existing, userMsg];
       setMentorMessages((prev) => ({ ...prev, [role]: optimistic }));
 
-      const res = await fetch('/api/mentor/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { ok: resOk, data } = await apiPost('/api/mentor/chat', {
           role,
           locale: profile.locale,
           message,
           history: existing.slice(-10).map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
+        });
+      if (!resOk) {
         throw new Error(data.error || 'Executive Mentor request failed.');
       }
 
@@ -549,11 +546,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signIn = useCallback(async () => {
-    await signInWithGoogle();
+    await (await loadCloud()).signInWithGoogle();
   }, []);
 
   const signOut = useCallback(async () => {
-    await signOutAccount();
+    await (await loadCloud()).signOutAccount();
   }, []);
 
   const dict = useMemo(() => getDictionary(profile.locale), [profile.locale]);
@@ -562,6 +559,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       authReady,
+      hydrated,
       isOnline,
       profile,
       locale: profile.locale,
@@ -588,6 +586,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [
       user,
       authReady,
+      hydrated,
       isOnline,
       profile,
       dict,

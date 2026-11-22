@@ -2,19 +2,14 @@ import { NextResponse } from 'next/server';
 import { buildExecutiveMentorSystemInstruction } from '@core/prompts';
 import { MentorChatInputSchema } from '@core/schemas';
 import { GENERAL_MENTOR_MODEL, getGeminiClient } from '@/lib/gemini';
-import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
   try {
-    const clientId = getClientIdentifier(request);
-    if (!checkRateLimit(`mentor:${clientId}`, 30, 60_000)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please pause briefly.' },
-        { status: 429 }
-      );
-    }
+    const gate = await guard(request, 'mentor');
+    if (!gate.ok) return gate.response;
 
-    const body = await request.json();
+    const body = (await readJson(request)) as Record<string, unknown>;
     const parsed = MentorChatInputSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -34,6 +29,7 @@ export async function POST(request: Request) {
         parts: [{ text: turn.content }],
       })),
       config: {
+        maxOutputTokens: 900,
         systemInstruction,
       },
     });
@@ -49,7 +45,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ reply });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Executive mentor chat failed.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('mentor', error);
   }
 }

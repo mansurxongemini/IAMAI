@@ -96,6 +96,16 @@ export interface Dictionary {
     notFound: string;
     deleteRoadmap: string;
     cachedNote: string;
+    daysLeft: string;
+    onTrack: string;
+    behind: string;
+    ahead: string;
+    current: string;
+    continueNext: string;
+    phaseDone: string;
+    confirmArchive: string;
+    phases: string;
+    minutesShort: string;
   };
   assistant: {
     title: string;
@@ -258,6 +268,16 @@ export const DICTIONARIES: Record<Locale, Dictionary> = {
       notFound: 'Roadmap not found in your workspace.',
       deleteRoadmap: 'Archive Plan',
       cachedNote: 'Canonical answer served from cache',
+      daysLeft: 'days left',
+      onTrack: 'On track',
+      behind: 'Behind by {n} steps',
+      ahead: 'Ahead by {n} steps',
+      current: 'Current',
+      continueNext: 'Continue',
+      phaseDone: 'Complete',
+      confirmArchive: 'Confirm archive',
+      phases: 'Phases',
+      minutesShort: 'min',
     },
     assistant: {
       title: 'Personal Execution Assistant',
@@ -419,6 +439,16 @@ export const DICTIONARIES: Record<Locale, Dictionary> = {
       notFound: 'Yoʻl xaritasi topilmadi.',
       deleteRoadmap: 'Rejani arxivlash',
       cachedNote: 'Kanonik javob keshdan tez yuklandi',
+      daysLeft: 'kun qoldi',
+      onTrack: 'Reja boʻyicha',
+      behind: '{n} qadam ortda',
+      ahead: '{n} qadam oldinda',
+      current: 'Joriy',
+      continueNext: 'Davom etish',
+      phaseDone: 'Yakunlandi',
+      confirmArchive: 'Arxivlashni tasdiqlang',
+      phases: 'Bosqichlar',
+      minutesShort: 'daq',
     },
     assistant: {
       title: 'Shaxsiy ijro yordamchisi',

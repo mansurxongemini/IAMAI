@@ -10,19 +10,14 @@ import {
   FAST_STRUCTURED_MODEL,
   getGeminiClient,
 } from '@/lib/gemini';
-import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
   try {
-    const clientId = getClientIdentifier(request);
-    if (!checkRateLimit(`decompose:${clientId}`, 20, 60_000)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again in a moment.' },
-        { status: 429 }
-      );
-    }
+    const gate = await guard(request, 'decompose');
+    if (!gate.ok) return gate.response;
 
-    const body = await request.json();
+    const body = (await readJson(request)) as Record<string, unknown>;
     const parsed = DecomposeTasksInputSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -39,6 +34,7 @@ export async function POST(request: Request) {
       model: FAST_STRUCTURED_MODEL,
       contents: prompt.contents,
       config: {
+        maxOutputTokens: 1600,
         systemInstruction: prompt.systemInstruction,
         responseMimeType: 'application/json',
         responseSchema: DECOMPOSE_TASKS_RESPONSE_SCHEMA,
@@ -62,10 +58,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const ownerId =
-      typeof body.ownerId === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(body.ownerId)
-        ? body.ownerId
-        : 'local-executive';
+    // Identity comes only from the verified token, never from the request body.
+    const ownerId = gate.user?.uid ?? 'local-executive';
     const nowIso = new Date().toISOString();
 
     const tasks: DailyTask[] = validated.data.tasks.map((item, index) => ({
@@ -90,7 +84,6 @@ export async function POST(request: Request) {
       tasks,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to sequence tasks.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError('decompose', error);
   }
 }

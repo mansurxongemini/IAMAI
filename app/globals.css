@@ -1,65 +1,314 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic colour tokens. Every component uses these, so light and dark are one switch. */
+@theme inline {
+  --color-canvas: var(--c-canvas);
+  --color-canvas-2: var(--c-canvas-2);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-ink: var(--c-ink);
+  --color-ink-2: var(--c-ink-2);
+  --color-muted: var(--c-muted);
+  --color-accent: var(--c-accent);
+  --color-on-accent: var(--c-on-accent);
+  --color-paper: var(--c-paper);
+  --color-success: var(--c-success);
+  --color-warn: var(--c-warn);
+  --color-danger: var(--c-danger);
+  --color-obsidian: var(--c-obsidian);
+  --font-display: var(--font-anton), Impact, 'Arial Narrow', sans-serif;
+}
+
+/* One system with the landing: square corners everywhere (pills and circles keep rounded-full only where meant). */
+@theme {
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+}
+
 :root {
-  --canvas-primary: #F4F1EC;
-  --canvas-secondary: #EAE5DC;
-  --surface-glass: rgba(255, 255, 255, 0.76);
+  /* Light: zinc neutrals + the landing's indigo. Dark below is the landing's own palette. */
+  --c-canvas: #FAFAFA;
+  --c-canvas-2: #F4F4F5;
+  --c-surface: #FFFFFF;
+  --c-surface-2: #F4F4F5;
+  --c-ink: #0A0A0A;
+  --c-ink-2: #3F3F46;
+  --c-muted: #6B6B74;
+  --c-accent: #4F46E5;
+  --c-on-accent: #FFFFFF;
+  --c-paper: #FFFFFF;
+  --c-success: #15803D;
+  --c-warn: #B45309;
+  --c-danger: #B91C1C;
+  --c-obsidian: #0A0A0A;
+  --c-hairline: rgba(10, 10, 10, 0.08);
+  --c-shadow: 10, 10, 10;
+  /* Brand tokens: the landing's black + indigo; Inter text, Anton display, Martian Mono labels */
+  --p-bg: #fafafa; --p-surface: #ffffff; --p-ink: #0a0a0a; --p-muted: #6b6b74;
+  --p-accent: #4f46e5; --p-accent-ink: #ffffff; --p-action: #4f46e5; --p-action-ink: #ffffff;
+  --p-inv-bg: #0a0a0a; --p-inv-surface: #151517; --p-inv-ink: #fafafa; --p-inv-muted: #a1a1aa;
+  --display-weight: 400;
+  --display-tracking: -0.02em;
+  --display-tracking-xl: -0.03em;
+  --canvas-primary: #FAFAFA;
+  --canvas-secondary: #F4F4F5;
+  --surface-glass: rgba(255, 255, 255, 0.78);
   --surface-solid: #FFFFFF;
-  --ink-primary: #1C1C1A;
-  --ink-muted: #6A6760;
-  --accent-bronze: #6E573E;
-  --hairline: rgba(28, 28, 26, 0.08);
-  --hairline-strong: rgba(28, 28, 26, 0.14);
+  --ink-primary: #0A0A0A;
+  --ink-muted: #6B6B74;
+  --accent-bronze: #4F46E5;
+  --hairline: rgba(10, 10, 10, 0.08);
+  --hairline-strong: rgba(10, 10, 10, 0.16);
+  --shadow-soft: 0 1px 0 rgba(10, 10, 10, 0.04);
+  --shadow-lift: 0 12px 32px -16px rgba(10, 10, 10, 0.22);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+  --c-canvas: #0A0A0A;
+  --c-canvas-2: #111113;
+  --c-surface: #151517;
+  --c-surface-2: #1C1C1F;
+  --c-ink: #FAFAFA;
+  --c-ink-2: #D4D4D8;
+  --c-muted: #A1A1AA;
+  --c-accent: #6366F1;
+  --c-on-accent: #FFFFFF;
+  --c-paper: #0A0A0A;
+  --c-success: #4ADE80;
+  --c-warn: #FBBF24;
+  --c-danger: #F87171;
+  --c-obsidian: #060607;
+  --c-hairline: rgba(250, 250, 250, 0.08);
+  --c-shadow: 0, 0, 0;
+  --hairline: rgba(250, 250, 250, 0.08);
+  --hairline-strong: rgba(250, 250, 250, 0.16);
+  --surface-glass: rgba(21, 21, 23, 0.78);
+  --shadow-soft: 0 1px 0 rgba(0, 0, 0, 0.3);
+  --shadow-lift: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
 }
 
 @layer base {
   html {
-    background-color: var(--canvas-primary);
-    color: var(--ink-primary);
+    background-color: var(--c-canvas);
+    color: var(--c-ink);
     font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
 
   body {
-    min-height: 100vh;
-    background:
-      radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.65), transparent 44%),
-      radial-gradient(circle at 88% 85%, rgba(234, 229, 220, 0.9), transparent 48%),
-      var(--canvas-primary);
-    color: var(--ink-primary);
+    min-height: 100dvh;
+    background: var(--c-canvas);
+    color: var(--c-ink);
+    transition: background-color 240ms ease, color 240ms ease;
   }
 
-  h1, h2, h3, .font-editorial {
-    font-family: var(--font-serif), Georgia, serif;
-    text-wrap: balance;
+  h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; }
+
+  p { text-wrap: pretty; }
+
+  ::selection { background: var(--c-ink); color: var(--c-paper); }
+
+  :focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 3px;
   }
+  .closing :focus-visible, .obsidian-surface :focus-visible { outline-color: #FAFAFA; }
+  /* The ring is there at once (no colour transition) and never lands under the fixed header. */
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible { transition-duration: 0s !important; }
+  :where(a, button, input, textarea, select) { scroll-margin-block: 96px; }
+
+  input, textarea, select { font: inherit; }
 }
 
-.font-editorial {
-  font-family: var(--font-serif), Georgia, serif;
+/* Display: Anton, uppercase, one weight — the landing's poster type. Unlayered, so it wins over size/weight utilities. */
+h1, .font-editorial {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis: none;
+  text-transform: uppercase;
+  letter-spacing: -0.015em;
+  line-height: 0.95;
 }
+h3.font-editorial { font-family: var(--font-sans), system-ui, sans-serif; font-weight: 600; text-transform: none; letter-spacing: -0.015em; line-height: 1.25; }
 
+/* Labels: the landing's mono furniture (10.5px, +.18em, uppercase) */
+.label-mono { font-family: var(--font-mono), ui-monospace, monospace; font-size: 10.5px; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase; }
+
+/* Figures: Martian Mono, tabular */
 .font-mono-tabular {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
+
+/* Skip link: first Tab stop, visible on focus, above the fixed header */
+.skip-link {
+  position: absolute; left: 0; top: 10px; z-index: 100;
+  padding: 10px 16px; border-radius: 0;
+  background: var(--c-ink); color: var(--c-paper); font-size: 14px; font-weight: 500;
+  transform: translateY(-160%); transition: transform 160ms var(--ease-out);
+}
+.skip-link:focus-visible { transform: none; outline-offset: 3px; }
 
 .glass-surface {
   background: var(--surface-glass);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: saturate(160%) blur(16px);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
   border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-soft);
 }
 
 .obsidian-surface {
-  background: #1C1C1A;
+  background: var(--c-obsidian);
   color: #FFFFFF;
+  box-shadow: var(--shadow-lift);
 }
+
+/* Cards gently lift on hover */
+.lift {
+  transition: transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out);
+}
+.lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+
+/* Page entrance: staggered fade-up of direct children */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.page-enter > * { animation: fade-up 520ms var(--ease-out) both; }
+.page-enter > *:nth-child(2) { animation-delay: 60ms; }
+.page-enter > *:nth-child(3) { animation-delay: 120ms; }
+.page-enter > *:nth-child(4) { animation-delay: 180ms; }
+.page-enter > *:nth-child(n+5) { animation-delay: 240ms; }
+
+@keyframes scale-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.animate-scale-in { animation: scale-in 180ms var(--ease-out) both; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fade-in 160ms ease-out both; }
+
+kbd {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 0;
+  border: 1px solid var(--hairline-strong);
+  background: color-mix(in oklab, var(--c-surface) 70%, transparent);
+  color: var(--c-muted);
+}
+
+/* Thin, quiet scrollbars */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--c-ink) 20%, transparent) transparent; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Marketing frame (tasteskill layout: one section per screen, equal edges) ---------- */
+.wrap {
+  /* One container: equal margins, no inner padding, so its box IS the content edge. */
+  width: min(1280px, calc(100% - 2 * clamp(20px, 5.6vw, 80px)));
+  margin-inline: auto;
+}
+
+.ts-section {
+  position: relative;
+  height: calc(var(--h, 1) * 100svh);
+  padding-top: 120px;
+  padding-bottom: 72px;
+}
+.ts-section > .wrap { position: relative; z-index: 1; height: 100%; }
+@media (max-width: 1023px) {
+  .ts-section { height: auto; min-height: calc(var(--h, 1) * 100svh); }
+}
+@media (max-width: 639px) {
+  .ts-section { min-height: calc(var(--hm, 1) * 100lvh); padding-top: 96px; padding-bottom: 48px; }
+}
+
+.ts-hero { height: 100svh; padding-top: 120px; padding-bottom: 64px; }
+@media (max-width: 639px) { .ts-hero { height: auto; min-height: 100svh; padding-top: 96px; padding-bottom: 24px; } }
+
+/* Hero entrance: once on load, words never hidden without script (html.m-enter is set in <head>) */
+@keyframes ts-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+html.m-enter [data-enter] [data-enter-item] { animation: ts-enter 760ms var(--ease-out) both; }
+html.m-enter [data-enter] [data-enter-item]:nth-child(2) { animation-delay: 70ms; }
+html.m-enter [data-enter] [data-enter-item]:nth-child(3) { animation-delay: 140ms; }
+html.m-enter [data-enter] [data-enter-item]:nth-child(4) { animation-delay: 210ms; }
+html.m-enter [data-enter] [data-enter-item]:nth-child(5) { animation-delay: 300ms; }
+
+/* Lit frame the product window rises out of; fades into the ground at the hero's foot */
+.lit-frame {
+  border-radius: 0;
+  background:
+    radial-gradient(70% 90% at 50% 0%, color-mix(in oklab, var(--c-surface) 95%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--c-canvas-2) 0%, var(--c-canvas) 100%);
+  border: 1px solid var(--hairline);
+  -webkit-mask-image: linear-gradient(180deg, #000 82%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 82%, transparent 100%);
+}
+
+/* App window (live product UI, not a picture) */
+.app-frame {
+  border-radius: 0;
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline);
+  box-shadow: 0 1px 2px rgba(var(--c-shadow), 0.06), 0 24px 60px -24px rgba(var(--c-shadow), 0.28);
+  overflow: hidden;
+}
+
+/* Link underline that draws on hover */
+.link-draw { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat; transition: background-size 240ms var(--ease-out); }
+.link-draw:hover, .link-draw:focus-visible { background-size: 100% 1px; }
+
+@keyframes ts-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ts-arrive { animation: ts-arrive 420ms var(--ease-out) both; }
+
+/* A tick that lands: scale pop when a step is checked */
+@keyframes check-pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+.check-btn[aria-pressed="true"] > svg { animation: check-pop 320ms var(--ease-out) both; }
+
+/* Film grain: one fixed, GPU-cheap layer that takes the digital flatness off the canvas */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark body::after { opacity: 0.05; }
+
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
+.animate-drawer-in { animation: drawer-in 260ms var(--ease-out) both; }
+
+/* Focused list row (keyboard J/K) */
+[data-row]:focus-visible { outline: none; background: color-mix(in oklab, var(--c-ink) 6%, transparent); box-shadow: inset 2px 0 0 var(--c-accent); }
+
+/* Scroll reveal (landing). Hidden only once JS has armed it and motion is allowed. */
+html.reveal-on [data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 800ms var(--ease-out), transform 900ms var(--ease-out);
+  transition-delay: var(--d, 0ms);
+}
+html.reveal-on [data-reveal="scale"] { transform: translateY(24px) scale(0.97); }
+html.reveal-on [data-reveal="mask"] { opacity: 1; transform: none; clip-path: inset(18% 0 0 0); transition: clip-path 1100ms var(--ease-out); transition-delay: var(--d, 0ms); }
+html.reveal-on [data-reveal].is-in { opacity: 1; transform: none; }
+html.reveal-on [data-reveal="mask"].is-in { clip-path: inset(0 0 0 0); }
+[data-parallax] { will-change: transform; }
