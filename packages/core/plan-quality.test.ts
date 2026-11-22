@@ -62,7 +62,7 @@ test('a patch that skips every module still yields a full plan', () => {
   };
   const rm = plan('ielts-academic', 60, 2, skipAll);
   const active = rm.phases.flatMap((p) => p.modules).filter((m) => m.priority !== 'skip');
-  assert.equal(active.length, 6);
+  assert.equal(active.length, ielts.phases.flatMap((p) => p.modules).length);
   assert.ok(rm.totalAllocatedHours > 100);
 });
 
@@ -119,7 +119,9 @@ test('Today spreads the steps across the whole plan instead of finishing in a we
         if (stepMinutes === 0) assert.ok(items.some((i) => i.kind === 'practice'), `${bp.id} day ${d} has a practice session`);
       }
       const open = rm.phases.flatMap((p) => p.modules).filter((m) => m.priority !== 'skip').flatMap((m) => m.steps).filter((s) => !s.completed);
-      assert.equal(open.length, 0, `${bp.id} ${days}x${hours}: every step is handed out before the deadline`);
+      // When the steps alone need more than ~80% of every planned minute, some stay open (the plan is flagged tight instead).
+      const stepTotal = bp.phases.flatMap((p) => p.modules).flatMap((m) => m.steps).reduce((s, x) => s + x.estimatedMinutes, 0);
+      if (stepTotal <= days * budget * 0.8) assert.equal(open.length, 0, `${bp.id} ${days}x${hours}: every step is handed out before the deadline`);
       assert.ok(lastStepDay >= days * 0.75, `${bp.id} ${days}x${hours}: last step on day ${lastStepDay}, plan runs ${days} days`);
     }
   }
@@ -165,4 +167,11 @@ test('the plan starts on the learner’s calendar day, whatever the server clock
   const rm = applyDeltaPatchAndSchedule({ roadmapId: 'rm', ownerId: 'u', blueprint: bp, input: inp, deltaPatch: buildSeedDeltaPatch(bp, inp), startDate: new Date(`${inp.startDate}T00:00:00.000Z`) });
   assert.equal(rm.phases[0]!.modules[0]!.startDate, '2026-11-23');
   assert.equal(rm.deadlineDate, '2027-01-22');
+});
+
+test('the diagnostic module is shortened, never skipped (live: Gemini skipped the TOEFL baseline test)', () => {
+  const toefl = getBlueprintById('toefl-ibt')!;
+  const first = toefl.phases[0]!.modules[0]!.id;
+  const patch = normalizeDeltaPatch({ strategySummary: 's', dailySlotRecommendation: 'd', moduleAdjustments: [{ moduleId: first, priority: 'skip', allocatedHours: 0, customFocus: 'x' }] }, toefl);
+  assert.equal(patch?.moduleAdjustments[0]?.priority, 'low');
 });

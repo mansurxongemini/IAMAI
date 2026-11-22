@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getBlueprintById } from '@core/blueprints';
 import { buildDeltaPatchPrompt } from '@core/prompts';
-import { applyDeltaPatchAndSchedule, buildSeedDeltaPatch } from '@core/scheduler';
+import { applyDeltaPatchAndSchedule } from '@core/scheduler';
 import { normalizeDeltaPatch } from '@core/normalize';
 import { AdaptRoadmapInputSchema, type GeminiDeltaPatch } from '@core/schemas';
 import {
@@ -11,7 +11,7 @@ import {
   getGeminiClient,
   retryOnBusy,
 } from '@/lib/gemini';
-import { guard, readJson, serverError } from '@/lib/server/guard';
+import { aiUnavailable, guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
   try {
@@ -33,10 +33,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Selected blueprint not found.' }, { status: 404 });
     }
 
-    // Blueprint-first: Gemini only personalises. If it is unavailable or returns an
-    // invalid patch, the deterministic baseline still produces a complete plan.
+    // Blueprint-first: Gemini personalises the expert curriculum. If it cannot answer, the learner
+    // is told the AI connection was lost; no plan is made without it.
     let deltaPatch: GeminiDeltaPatch;
-    let adapted = true;
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), AI_TIMEOUT_MS);
     try {
@@ -59,9 +58,8 @@ export async function POST(request: Request) {
       if (!patch) throw new Error('Delta patch had no usable module adjustments');
       deltaPatch = patch;
     } catch (err) {
-      console.warn('[api:adapt] falling back to deterministic plan:', err instanceof Error ? err.message : err);
-      deltaPatch = buildSeedDeltaPatch(blueprint, input);
-      adapted = false;
+      console.warn('[api:adapt] AI model unavailable:', err instanceof Error ? err.message : err);
+      return aiUnavailable();
     } finally {
       clearTimeout(timer);
     }
@@ -79,7 +77,7 @@ export async function POST(request: Request) {
       startDate: input.startDate ? new Date(`${input.startDate}T00:00:00.000Z`) : undefined,
     });
 
-    return NextResponse.json({ deltaPatch, roadmap, adapted });
+    return NextResponse.json({ deltaPatch, roadmap });
   } catch (error) {
     return serverError('adapt', error);
   }

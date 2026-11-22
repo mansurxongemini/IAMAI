@@ -7,7 +7,7 @@ import type { MentorRole } from '@core/schemas';
 import { AppShell } from '@/components/AppShell';
 import { Topbar } from '@/components/workspace/Topbar';
 import { useWorkspace } from '@/components/WorkspaceProvider';
-import { apiPost } from '@/lib/api-client';
+import { apiErrorText, apiPost } from '@/lib/api-client';
 
 type AssistantTab = 'planner' | 'mentor';
 
@@ -68,7 +68,7 @@ export default function AssistantPage() {
           ownerId: user?.uid ?? 'local-executive',
         });
       if (!resOk) {
-        throw new Error(data.error || dict.errors.sequenceFailed);
+        throw new Error(apiErrorText(data, dict.errors.aiUnavailable, dict.errors.sequenceFailed));
       }
       if (data.dayBrief) setDayBrief(data.dayBrief);
       if (Array.isArray(data.tasks) && data.tasks.length > 0) {

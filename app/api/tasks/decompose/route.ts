@@ -9,7 +9,7 @@ import {
   getGeminiClient,
   retryOnBusy,
 } from '@/lib/gemini';
-import { guard, readJson, serverError } from '@/lib/server/guard';
+import { aiUnavailable, guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
   try {
@@ -47,16 +47,13 @@ export async function POST(request: Request) {
 
     const rawText = (response.text ?? '').trim();
     if (!rawText) {
-      return NextResponse.json(
-        { error: 'Empty schedule returned from Gemini.' },
-        { status: 502 }
-      );
+      return aiUnavailable();
     }
 
     // Map translated priorities ("Yuqori", "O'rta") and trim long fields instead of failing the whole day.
     const validated = normalizeDecomposedTasks(JSON.parse(rawText));
     if (!validated) {
-      return NextResponse.json({ error: 'Task schedule failed schema validation.' }, { status: 502 });
+      return aiUnavailable();
     }
 
     // Identity comes only from the verified token, never from the request body.

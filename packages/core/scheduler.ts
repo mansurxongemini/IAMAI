@@ -93,16 +93,39 @@ export function applyDeltaPatchAndSchedule(params: {
   const budgetHours = D * input.dailyHours;
   const plannedHours = Math.min(budgetHours, activeBaseline * MAX_BUDGET_OVER_BASELINE);
 
-  // Hours and back-to-back day ranges, proportional to weight.
+  // Whole days per module, proportional to weight. When the deadline has at least one day per module,
+  // every module gets one and the rest go by largest remainder, so ranges are back to back and never
+  // share a day; with fewer days than modules, ranges are proportional and may share days.
+  const active = allModules.filter((m) => weight.has(m.id));
+  const dayCount = new Map<string, number>();
+  if (D >= active.length) {
+    const spare = D - active.length;
+    const exact = active.map((m) => ({ id: m.id, x: (weight.get(m.id)! / weightSum) * spare }));
+    let left = spare - exact.reduce((s, e) => s + Math.floor(e.x), 0);
+    for (const e of exact) dayCount.set(e.id, 1 + Math.floor(e.x));
+    for (const e of [...exact].sort((a, b) => (b.x % 1) - (a.x % 1))) {
+      if (left-- <= 0) break;
+      dayCount.set(e.id, dayCount.get(e.id)! + 1);
+    }
+  }
+
   let cumulative = 0;
+  let nextDay = 0;
   let totalAllocatedHours = 0;
   const slot = new Map<string, { hours: number; from: number; to: number }>();
-  for (const mod of allModules) {
-    const w = weight.get(mod.id);
-    if (w === undefined) continue;
-    const from = Math.min(D - 1, Math.round((cumulative / weightSum) * D));
+  for (const mod of active) {
+    const w = weight.get(mod.id)!;
+    let from: number;
+    let toExclusive: number;
+    if (dayCount.size) {
+      from = nextDay;
+      toExclusive = from + dayCount.get(mod.id)!;
+      nextDay = toExclusive;
+    } else {
+      from = Math.min(D - 1, Math.round((cumulative / weightSum) * D));
+      toExclusive = Math.min(D, Math.max(from + 1, Math.round(((cumulative + w) / weightSum) * D)));
+    }
     cumulative += w;
-    const toExclusive = Math.min(D, Math.max(from + 1, Math.round((cumulative / weightSum) * D)));
     const hours = Math.max(0.5, Number(((w / weightSum) * plannedHours).toFixed(1)));
     totalAllocatedHours = Number((totalAllocatedHours + hours).toFixed(1));
     slot.set(mod.id, { hours, from, to: toExclusive - 1 });
@@ -312,15 +335,14 @@ export function suggestDailySlot(dailyHours: number, locale: 'en' | 'uz'): strin
 }
 
 /**
- * Deterministic delta patch used when the model is unavailable. It still reads the learner's own
- * words: modules whose title, summary or framework match the weak areas get priority, and nothing
- * else is guessed.
+ * Expert-order delta patch for the mobile demo seed and the tests. The web app never uses it in place
+ * of the AI: when Gemini cannot answer, the learner is told the connection was lost.
  */
 export function buildSeedDeltaPatch(blueprint: Blueprint, input: AdaptRoadmapInput): GeminiDeltaPatch {
   const allModules = blueprint.phases.flatMap((p) => p.modules);
   const weak = new Set(words(`${input.weakAreas ?? ''}`));
   const matches = (mod: (typeof allModules)[number]) =>
-    words(`${mod.title.en} ${mod.title.uz} ${mod.summary.en} ${mod.summary.uz} ${mod.keyFramework}`).some((w) =>
+    words(`${mod.title.en} ${mod.title.uz} ${mod.keyFramework}`).some((w) =>
       [...weak].some((x) => w.startsWith(x.slice(0, 5)) || x.startsWith(w.slice(0, 5)))
     );
 
@@ -333,8 +355,8 @@ export function buildSeedDeltaPatch(blueprint: Blueprint, input: AdaptRoadmapInp
       customFocus:
         input.locale === 'uz'
           ? high
-            ? `Zaif tomon sifatida belgilangan: ${mod.keyFramework} boʻyicha mashqlar koʻpaytiriladi.`
-            : `${mod.keyFramework} boʻyicha mutaxassis rejasi asosida.`
+            ? `Zaif tomon sifatida belgilangan: «${mod.title.uz}» boʻyicha mashqlar koʻpaytiriladi.`
+            : `«${mod.title.uz}» mutaxassis rejasi asosida.`
           : high
             ? `Flagged as a weak area: extra drills in ${mod.keyFramework}.`
             : `Follows the expert plan for ${mod.keyFramework}.`,

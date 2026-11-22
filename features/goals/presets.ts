@@ -5,7 +5,7 @@ import type { Dictionary } from '@core/i18n';
 const SCORE_PRESETS: Record<string, { current: readonly string[]; target: readonly string[] }> = {
   'ielts-academic': { current: ['Band 5.0', 'Band 5.5', 'Band 6.0', 'Band 6.5'], target: ['Band 6.5', 'Band 7.0', 'Band 7.5', 'Band 8.0'] },
   'sat-digital': { current: ['1050', '1200', '1300', '1400'], target: ['1350', '1450', '1500', '1550'] },
-  'toefl-ibt': { current: ['70', '80', '90', '100'], target: ['90', '100', '105', '110'] },
+  'toefl-ibt': { current: ['Band 3.5', 'Band 4.0', 'Band 4.5', 'Band 5.0'], target: ['Band 4.5', 'Band 5.0', 'Band 5.5', 'Band 6.0'] },
   lsat: { current: ['145', '150', '155', '160'], target: ['160', '165', '170', '175'] },
 };
 

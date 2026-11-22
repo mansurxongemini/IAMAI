@@ -22,6 +22,7 @@ export function buildDeltaPatchPrompt(blueprint: Blueprint, input: AdaptRoadmapI
       'Be realistic with the user hour budget (deadlineDays * dailyHours). Skip or compress foundational modules if the user already has that baseline; intensify weak areas.',
       'Keep strategySummary under 240 characters, each customFocus under 180 characters, and dailySlotRecommendation concrete.',
       'Return one entry per moduleId of the outline, using the exact ids. priority must be exactly one of the English words skip, low, normal, high — never translated, never "medium" or "critical".',
+      'Never skip the first (diagnostic) module: a self-reported level is a guess, and the baseline test is what the rest of the plan is measured against. Shorten it with priority low instead.',
       'allocatedHours are relative weights for the plan; keep each within 0.5x–2x of the module baselineHours unless you skip it. If the budget is far below baselineTotalHours, say so plainly in strategySummary.',
       'busyWindows are times the user cannot study: the dailySlotRecommendation must avoid them and use valid 24-hour times.',
       langRule,

@@ -82,7 +82,6 @@ const en = {
     feasibilityTight: (budget: number, baseline: number, suggested: number) =>
       `This plan has ${budget} h for a curriculum experts size at ${baseline} h. It covers the highest-yield parts first; about ${suggested} h a day would cover most of it.`,
     feasibilityLight: (minutes: number) => `The curriculum needs less time than you offered, so the plan asks for about ${minutes} min a day and leaves the rest free.`,
-    fallbackNotice: 'The AI mentor was unavailable, so this plan follows the expert curriculum as written, weighted by the weak areas you named.',
     behind: '{n} steps behind',
     ahead: '{n} steps ahead',
     current: 'Current',
@@ -365,6 +364,7 @@ landing: {
     title: 'Something went wrong',
     reload: 'Reload page',
     unexpected: 'An unexpected error occurred.',
+    aiUnavailable: 'Connection to the AI model was lost. Please try again in a moment.',
     sequenceTooShort: 'Enter at least one task to build a schedule.',
     tutorFailed: 'The AI mentor could not respond. Please try again.',
     mentorFailed: 'The mentor could not respond. Please try again.',
@@ -450,7 +450,6 @@ const uz: Dictionary = {
     feasibilityTight: (budget: number, baseline: number, suggested: number) =>
       `Bu rejada ${budget} soat bor, mutaxassislar esa dasturni ${baseline} soatga moʻljallagan. Avval eng samarali qismlar beriladi; dasturning katta qismini qamrash uchun kuniga taxminan ${suggested} soat kerak.`,
     feasibilityLight: (minutes: number) => `Dastur siz ajratgan vaqtdan kamroq vaqt talab qiladi, shuning uchun reja kuniga taxminan ${minutes} daqiqa soʻraydi, qolgani boʻsh qoladi.`,
-    fallbackNotice: 'AI mentor vaqtincha ishlamadi, shuning uchun reja mutaxassislar dasturi asosida, siz koʻrsatgan zaif tomonlarga urgʻu berib tuzildi.',
     behind: '{n} qadam ortda',
     ahead: '{n} qadam oldinda',
     current: 'Joriy',
@@ -731,6 +730,7 @@ landing: {
     title: 'Xatolik yuz berdi',
     reload: 'Sahifani yangilash',
     unexpected: 'Kutilmagan xatolik yuz berdi.',
+    aiUnavailable: 'AI model bilan aloqa uzildi. Birozdan soʻng qayta urinib koʻring.',
     sequenceTooShort: 'Jadval tuzish uchun kamida bitta vazifa kiriting.',
     tutorFailed: 'AI mentor javob bera olmadi. Qayta urinib koʻring.',
     mentorFailed: 'Mentor javob bera olmadi. Qayta urinib koʻring.',
