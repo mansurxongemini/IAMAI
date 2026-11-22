@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { buildNodeTutorPrompt } from '@core/prompts';
 import { computeNodeCacheHash } from '@core/scheduler';
 import { TutorNodeChatInputSchema } from '@core/schemas';
-import { GENERAL_MENTOR_MODEL, getGeminiClient } from '@/lib/gemini';
+import { generateTextWithFallback } from '@/lib/gemini';
 import { guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
@@ -28,7 +28,6 @@ export async function POST(request: Request) {
     );
 
     const prompt = buildNodeTutorPrompt(input);
-    const ai = getGeminiClient();
 
     // Scoped prompt: strictly node metadata + last 4 turns max
     const scopedHistory = input.recentHistory.slice(-4).map((turn) => ({
@@ -44,22 +43,12 @@ export async function POST(request: Request) {
       },
     ];
 
-    const response = await ai.models.generateContent({
-      model: GENERAL_MENTOR_MODEL,
+    // Mentor model first, fast model if it is slow, busy or returns nothing.
+    const { text: reply } = await generateTextWithFallback({
       contents,
-      config: {
-        maxOutputTokens: 600,
-        systemInstruction: prompt.systemInstruction,
-      },
+      systemInstruction: prompt.systemInstruction,
+      maxOutputTokens: 1600,
     });
-
-    const reply = (response.text ?? '').trim();
-    if (!reply) {
-      return NextResponse.json(
-        { error: 'AI Tutor returned an empty response.' },
-        { status: 502 }
-      );
-    }
 
     return NextResponse.json({ reply, nodeHash });
   } catch (error) {

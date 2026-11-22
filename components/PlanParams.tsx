@@ -17,7 +17,7 @@ function Chips<T extends number>({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(o)}
-            className={`h-9 min-w-[3.25rem] px-3 rounded-none text-xs font-medium font-mono-tabular transition-colors cursor-pointer ${
+            className={`h-9 min-w-[3.25rem] px-3 rounded-full text-xs font-medium font-mono-tabular transition-colors cursor-pointer ${
               active ? 'bg-accent text-on-accent' : 'bg-surface/80 border border-ink/10 text-ink hover:border-ink/30'
             }`}
           >
@@ -74,8 +74,8 @@ export function PlanParams({
             {available}{c.hrs === 'h' ? 'h' : ` ${c.hrs}`} <span className="text-muted">{c.of} {baselineHours}{c.hrs === 'h' ? 'h' : ` ${c.hrs}`}</span>
           </span>
         </div>
-        <div className="h-1.5 rounded-none bg-ink/[0.07] overflow-hidden">
-          <div className="h-full rounded-none transition-all duration-500" style={{ width: `${Math.min(100, ratio * 100)}%`, background: tone }} />
+        <div className="h-1.5 rounded-full bg-ink/[0.07] overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, ratio * 100)}%`, background: tone }} />
         </div>
         <p className="text-[11px] font-medium" style={{ color: tone }}>{status}</p>
       </div>

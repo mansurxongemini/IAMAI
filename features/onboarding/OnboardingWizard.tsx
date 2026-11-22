@@ -16,8 +16,11 @@ import { AppShell } from '@/components/AppShell';
 import { Topbar } from '@/components/workspace/Topbar';
 import { CATEGORY_ICON } from '@/features/goals/GoalCatalog';
 import { presetsFor } from '@/features/goals/presets';
-import { TRACK_PHOTO } from '@/features/goals/photos';
+import { trackArt } from '@/features/goals/photos';
+import { hueVars, trackHue } from '@/features/goals/hues';
 import { getDictionary } from '@core/i18n';
+import { localDay } from '@/features/today/activity';
+import { CurriculumSources } from '@/components/CurriculumSources';
 
 const TOTAL = 4;
 
@@ -88,10 +91,11 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
         dailyHours,
         busyWindows: profile.busyWindows,
         weakAreas: focus.trim() || undefined,
+        startDate: localDay(),
       });
       if (!ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Error');
       await addRoadmap(data.roadmap);
-      router.push(`/plan/${data.roadmap.id}`);
+      router.push(`/plan/${data.roadmap.id}${data.adapted === false ? '?fallback=1' : ''}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error');
       setBusy(false);
@@ -143,7 +147,7 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
         </div>
         <div className="flex gap-1.5" aria-hidden="true">
           {Array.from({ length: TOTAL }, (_, i) => (
-            <span key={i} className={cn('h-1 flex-1 rounded-none transition-colors duration-300', i <= step ? 'bg-ink' : 'bg-ink/10')} />
+            <span key={i} className={cn('h-1 flex-1 rounded-full transition-colors duration-300', i <= step ? 'bg-ink' : 'bg-ink/10')} />
           ))}
         </div>
         <div className="flex items-center gap-2 text-xs text-accent">
@@ -203,20 +207,30 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
     </div>
 
     <aside className="hidden lg:block lg:col-start-8 lg:col-span-5 sticky top-24">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-none">
-        <Image src={TRACK_PHOTO[entry.category].src} alt={d.photos[entry.category]} fill sizes="40vw" className="object-cover" />
-        <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" aria-hidden="true" />
-        <div className="absolute inset-x-0 bottom-0 p-7 text-white space-y-3">
-          <p className="text-[12px] font-mono-tabular tracking-wide text-white/70">{entry.code}</p>
-          <p className="text-[28px] leading-tight font-medium tracking-[-0.03em]">{entry.title[locale]}</p>
-          <p className="text-[14px] leading-relaxed text-white/80">{entry.subtitle[locale]}</p>
-          <dl className="grid grid-cols-3 gap-4 border-t border-white/20 pt-4 font-mono-tabular">
-            <div><dt className="text-[11px] text-white/60">{c.weeks}</dt><dd className="text-[20px]">{entry.recommendedWeeks}</dd></div>
-            <div><dt className="text-[11px] text-white/60">{c.hours}</dt><dd className="text-[20px]">{entry.baselineTotalHours}</dd></div>
-            <div><dt className="text-[11px] text-white/60">{c.steps}</dt><dd className="text-[20px]">{entry.steps}</dd></div>
+      <div
+        style={hueVars(trackHue(entry.id))}
+        className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-[var(--hue)] text-[var(--hue-deep)] flex flex-col p-7"
+      >
+        <Image
+          src={trackArt(entry.id)}
+          alt=""
+          width={560}
+          height={560}
+          sizes="(min-width: 1024px) 22vw, 0px"
+          className="mx-auto mt-2 w-[68%] h-auto drop-shadow-[0_24px_28px_rgba(0,0,0,0.18)]"
+        />
+        <div className="mt-auto space-y-3">
+          <p className="text-[12px] font-mono-tabular tracking-wide opacity-75">{entry.code}</p>
+          <p className="text-[28px] leading-tight font-bold tracking-[-0.03em]">{entry.title[locale]}</p>
+          <p className="text-[14px] leading-relaxed opacity-85">{entry.subtitle[locale]}</p>
+          <dl className="grid grid-cols-3 gap-4 border-t border-current/25 pt-4 font-mono-tabular">
+            <div><dt className="text-[11px] opacity-70">{c.weeks}</dt><dd className="text-[20px]">{entry.recommendedWeeks}</dd></div>
+            <div><dt className="text-[11px] opacity-70">{c.hours}</dt><dd className="text-[20px]">{entry.baselineTotalHours}</dd></div>
+            <div><dt className="text-[11px] opacity-70">{c.steps}</dt><dd className="text-[20px]">{entry.steps}</dd></div>
           </dl>
         </div>
       </div>
+      <CurriculumSources entry={entry} d={d} className="mt-4 px-1" />
     </aside>
     </div>
     </AppShell>

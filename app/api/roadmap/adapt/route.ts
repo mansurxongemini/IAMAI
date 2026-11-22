@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 import { getBlueprintById } from '@core/blueprints';
 import { buildDeltaPatchPrompt } from '@core/prompts';
 import { applyDeltaPatchAndSchedule, buildSeedDeltaPatch } from '@core/scheduler';
-import { AdaptRoadmapInputSchema, GeminiDeltaPatchSchema, type GeminiDeltaPatch } from '@core/schemas';
+import { normalizeDeltaPatch } from '@core/normalize';
+import { AdaptRoadmapInputSchema, type GeminiDeltaPatch } from '@core/schemas';
 import {
+  AI_TIMEOUT_MS,
   DELTA_PATCH_RESPONSE_SCHEMA,
   FAST_STRUCTURED_MODEL,
   getGeminiClient,
+  retryOnBusy,
 } from '@/lib/gemini';
 import { guard, readJson, serverError } from '@/lib/server/guard';
 
@@ -34,25 +37,33 @@ export async function POST(request: Request) {
     // invalid patch, the deterministic baseline still produces a complete plan.
     let deltaPatch: GeminiDeltaPatch;
     let adapted = true;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), AI_TIMEOUT_MS);
     try {
       const prompt = buildDeltaPatchPrompt(blueprint, input);
-      const response = await getGeminiClient().models.generateContent({
-        model: FAST_STRUCTURED_MODEL,
-        contents: prompt.contents,
-        config: {
-          maxOutputTokens: 1200,
-          systemInstruction: prompt.systemInstruction,
-          responseMimeType: 'application/json',
-          responseSchema: DELTA_PATCH_RESPONSE_SCHEMA,
-        },
-      });
-      const validated = GeminiDeltaPatchSchema.safeParse(JSON.parse((response.text ?? '').trim()));
-      if (!validated.success) throw new Error('Delta patch failed schema validation');
-      deltaPatch = validated.data;
+      const response = await retryOnBusy(() =>
+        getGeminiClient().models.generateContent({
+          model: FAST_STRUCTURED_MODEL,
+          contents: prompt.contents,
+          config: {
+            maxOutputTokens: 1600,
+            systemInstruction: prompt.systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: DELTA_PATCH_RESPONSE_SCHEMA,
+            abortSignal: ctl.signal,
+          },
+        })
+      );
+      // Map near-misses ("medium", translated enums, unknown ids) instead of rejecting the whole plan.
+      const patch = normalizeDeltaPatch(JSON.parse((response.text ?? '').trim()), blueprint);
+      if (!patch) throw new Error('Delta patch had no usable module adjustments');
+      deltaPatch = patch;
     } catch (err) {
       console.warn('[api:adapt] falling back to deterministic plan:', err instanceof Error ? err.message : err);
       deltaPatch = buildSeedDeltaPatch(blueprint, input);
       adapted = false;
+    } finally {
+      clearTimeout(timer);
     }
 
     // Identity comes only from the verified token, never from the request body.
@@ -65,6 +76,7 @@ export async function POST(request: Request) {
       blueprint,
       input,
       deltaPatch,
+      startDate: input.startDate ? new Date(`${input.startDate}T00:00:00.000Z`) : undefined,
     });
 
     return NextResponse.json({ deltaPatch, roadmap, adapted });

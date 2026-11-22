@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { buildExecutiveMentorSystemInstruction } from '@core/prompts';
 import { MentorChatInputSchema } from '@core/schemas';
-import { GENERAL_MENTOR_MODEL, getGeminiClient } from '@/lib/gemini';
+import { generateTextWithFallback } from '@/lib/gemini';
 import { guard, readJson, serverError } from '@/lib/server/guard';
 
 export async function POST(request: Request) {
@@ -20,28 +20,18 @@ export async function POST(request: Request) {
 
     const { role, locale, message, history } = parsed.data;
     const systemInstruction = buildExecutiveMentorSystemInstruction(role, locale);
-    const ai = getGeminiClient();
-
-    const chat = ai.chats.create({
-      model: GENERAL_MENTOR_MODEL,
-      history: history.map((turn) => ({
-        role: turn.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: turn.content }],
-      })),
-      config: {
-        maxOutputTokens: 900,
-        systemInstruction,
-      },
+    // Mentor model first, fast model if it is slow, busy or returns nothing.
+    const { text: reply } = await generateTextWithFallback({
+      contents: [
+        ...history.map((turn) => ({
+          role: turn.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: turn.content }],
+        })),
+        { role: 'user', parts: [{ text: message }] },
+      ],
+      systemInstruction,
+      maxOutputTokens: 2000,
     });
-
-    const response = await chat.sendMessage({ message });
-    const reply = (response.text ?? '').trim();
-    if (!reply) {
-      return NextResponse.json(
-        { error: 'Mentor returned an empty reply.' },
-        { status: 502 }
-      );
-    }
 
     return NextResponse.json({ reply });
   } catch (error) {

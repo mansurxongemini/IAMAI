@@ -45,7 +45,7 @@ test('EN and UZ dictionaries contain identical structural keys and non-empty str
   shape(DICTIONARIES.en, '', en);
   shape(DICTIONARIES.uz, '', uz);
   assert.deepEqual(uz, en);
-  assert.equal(DICTIONARIES.uz.today.streak(3), '3 kun ketma-ket');
+  assert.equal(DICTIONARIES.uz.today.streak(3), '3 kun uzluksiz');
 });
 
 test('Zod validation enforces boundaries on AdaptRoadmapInput and Gemini outputs', () => {

@@ -56,7 +56,7 @@ export class ErrorBoundary extends React.Component<
                   window.location.reload();
                 }
               }}
-              className="inline-flex items-center justify-center rounded-none bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent/90 transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent/90 transition-colors cursor-pointer"
             >
               {d.errors.reload}
             </button>

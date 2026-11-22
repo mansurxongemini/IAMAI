@@ -3,9 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Archive, ArrowLeft, ArrowRight, Check, ChevronDown, MessageSquare } from 'lucide-react';
-import { computeRoadmapProgress } from '@core/scheduler';
+import { assessFeasibility, computeRoadmapProgress } from '@core/scheduler';
+import { stepDueDates } from '@core/today';
+import { getCatalogEntry } from '@core/catalog';
+import { CurriculumSources } from '@/components/CurriculumSources';
+import { localDay } from '@/features/today/activity';
 import type { RoadmapNode, RoadmapStep } from '@core/schemas';
 import { SkeletonLines } from '@/components/Skeleton';
 import { AppShell } from '@/components/AppShell';
@@ -27,6 +31,8 @@ export default function RoadmapWorkspacePage() {
   const [openPhases, setOpenPhases] = useState<Record<string, boolean>>({});
   const listRef = useRef<HTMLElement>(null);
   useListKeys(listRef);
+  // Set by onboarding when the AI was unavailable and the expert baseline was used.
+  const fallback = useSearchParams().get('fallback') === '1';
   const [confirmArchive, setConfirmArchive] = useState(false);
 
   // Deep link from Today: /plan/:id?ask=<stepId> opens the tutor on that step.
@@ -75,7 +81,7 @@ export default function RoadmapWorkspacePage() {
           <h1 className="font-editorial text-3xl text-ink">{dict.roadmap.notFound}</h1>
           <Link
             href="/today"
-            className="inline-flex items-center gap-2 rounded-none bg-accent px-5 py-2.5 text-xs font-medium text-on-accent"
+            className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-xs font-medium text-on-accent"
           >
             <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{dict.roadmap.backToDashboard}</span>
@@ -93,8 +99,13 @@ export default function RoadmapWorkspacePage() {
   const end = new Date(`${rm.deadlineDate}T23:59:59`).getTime();
   const now = Date.now();
   const daysLeft = Math.max(0, Math.ceil((end - now) / DAY));
-  const elapsed = end > start ? Math.min(1, Math.max(0, (now - start) / (end - start))) : 1;
-  const paceDelta = Math.round(progress.completedSteps - elapsed * progress.totalSteps);
+  // Pace against the step due dates the Today list uses, not a straight line over the deadline.
+  const todayIso = localDay();
+  const expectedByToday = [...stepDueDates(rm).values()].filter((d) => d <= todayIso).length;
+  const paceDelta = progress.completedSteps - expectedByToday;
+  const catalogEntry = getCatalogEntry(rm.blueprintId);
+  const baseline = catalogEntry?.baselineTotalHours;
+  const feasibility = baseline ? assessFeasibility(rm, baseline) : ({ status: 'ok' } as const);
   const paceLabel =
     Math.abs(paceDelta) <= 1
       ? dict.roadmap.onTrack
@@ -168,7 +179,7 @@ export default function RoadmapWorkspacePage() {
           <button
             type="button"
             onClick={() => void handleArchive()}
-            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-none text-xs transition-colors cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs transition-colors cursor-pointer ${
               confirmArchive ? 'bg-warn text-white' : 'text-muted hover:text-ink hover:bg-surface/70'
             }`}
           >
@@ -182,12 +193,24 @@ export default function RoadmapWorkspacePage() {
           <div className="lg:col-span-8 glass-surface rounded-3xl p-6 sm:p-8 flex flex-col gap-6">
             <div className="space-y-3">
               <div className="flex items-center flex-wrap gap-2 text-xs">
-                <span className="rounded-none bg-ink/[0.05] px-2.5 py-1 text-muted">{rm.currentLevel}</span>
+                <span className="rounded-full bg-ink/[0.05] px-2.5 py-1 text-muted">{rm.currentLevel}</span>
                 <ArrowRight className="w-3 h-3 text-muted" aria-hidden="true" />
-                <span className="rounded-none bg-accent px-2.5 py-1 text-on-accent font-medium">{rm.targetGoal}</span>
+                <span className="rounded-full bg-accent px-2.5 py-1 text-on-accent font-medium">{rm.targetGoal}</span>
               </div>
               <h1 className="font-editorial text-4xl sm:text-5xl font-medium tracking-tight text-ink">{rm.title[locale]}</h1>
               <p className="text-sm text-muted leading-relaxed max-w-2xl">{rm.strategySummary}</p>
+              {fallback && (
+                <p role="status" className="text-[13px] leading-relaxed max-w-2xl rounded-2xl bg-ink/[0.04] px-4 py-3 text-ink-2">{dict.roadmap.fallbackNotice}</p>
+              )}
+              {feasibility.status === 'tight' && (
+                <p className="text-[13px] leading-relaxed max-w-2xl rounded-2xl bg-warn/10 px-4 py-3 text-warn">
+                  {dict.roadmap.feasibilityTight(feasibility.budgetHours, feasibility.baselineHours, feasibility.suggestedDailyHours)}
+                </p>
+              )}
+              {feasibility.status === 'light' && (
+                <p className="text-[13px] leading-relaxed max-w-2xl rounded-2xl bg-ink/[0.04] px-4 py-3 text-ink-2">{dict.roadmap.feasibilityLight(feasibility.plannedDailyMinutes)}</p>
+              )}
+              {catalogEntry && <CurriculumSources entry={catalogEntry} d={dict} className="pt-1" />}
             </div>
             <div className="mt-auto pt-5 border-t border-ink/[0.07] flex flex-wrap items-center gap-x-8 gap-y-4">
               <ProgressRing value={progress.percentComplete} size={60} label={dict.roadmap.overallProgress} />
@@ -208,7 +231,7 @@ export default function RoadmapWorkspacePage() {
                 <button
                   type="button"
                   onClick={jumpToNext}
-                  className="ml-auto inline-flex items-center gap-2 h-10 px-5 rounded-none bg-accent text-on-accent text-xs font-medium hover:bg-accent/90 transition-colors cursor-pointer"
+                  className="ml-auto inline-flex items-center gap-2 h-10 px-5 rounded-full bg-accent text-on-accent text-xs font-medium hover:bg-accent/90 transition-colors cursor-pointer"
                 >
                   {dict.roadmap.continueNext}
                   <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
@@ -218,10 +241,10 @@ export default function RoadmapWorkspacePage() {
           </div>
 
           <div className="lg:col-span-4 obsidian-surface relative overflow-hidden rounded-3xl p-6 sm:p-7 flex flex-col justify-between gap-6">
-            <Image src={TRACK_PHOTO[rm.category].src} alt="" fill sizes="(min-width: 1024px) 33vw, 100vw" className="object-cover opacity-40" />
+            <Image src={TRACK_PHOTO[rm.category].small} alt="" fill sizes="(min-width: 1024px) 33vw, 100vw" className="object-cover object-right opacity-60" />
             <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" aria-hidden="true" />
             <div className="relative space-y-1.5">
-              <p className="text-xs text-[#C7B9A5]">{dict.roadmap.dailySlot}</p>
+              <p className="text-xs text-[var(--h-gold-light)]">{dict.roadmap.dailySlot}</p>
               <p className="text-[15px] font-medium text-white leading-relaxed">{rm.dailySlotRecommendation}</p>
             </div>
             <div className="relative grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
@@ -268,8 +291,8 @@ export default function RoadmapWorkspacePage() {
                         <span className={`text-xs leading-snug line-clamp-2 ${isCurrent ? 'text-ink font-medium' : 'text-muted'}`}>{phase.title[locale]}</span>
                       </div>
                       {st && st.total > 0 && (
-                        <div className="mt-2 ml-7 h-1 rounded-none bg-ink/[0.07] overflow-hidden">
-                          <div className="h-full bg-ink rounded-none transition-all duration-500" style={{ width: `${(st.done / st.total) * 100}%` }} />
+                        <div className="mt-2 ml-7 h-1 rounded-full bg-ink/[0.07] overflow-hidden">
+                          <div className="h-full bg-ink rounded-full transition-all duration-500" style={{ width: `${(st.done / st.total) * 100}%` }} />
                         </div>
                       )}
                     </button>
@@ -296,8 +319,8 @@ export default function RoadmapWorkspacePage() {
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center flex-wrap gap-2 text-xs">
                         <span className="font-mono-tabular text-accent">{phase.startDate} — {phase.endDate}</span>
-                        {isCurrent && <span className="rounded-none bg-accent text-on-accent px-2 py-0.5 text-[10px] font-medium">{dict.roadmap.current}</span>}
-                        {st?.complete && <span className="rounded-none bg-success/10 text-success px-2 py-0.5 text-[10px] font-medium">{dict.roadmap.phaseDone}</span>}
+                        {isCurrent && <span className="rounded-full bg-accent text-on-accent px-2 py-0.5 text-[10px] font-medium">{dict.roadmap.current}</span>}
+                        {st?.complete && <span className="rounded-full bg-success/10 text-success px-2 py-0.5 text-[10px] font-medium">{dict.roadmap.phaseDone}</span>}
                       </div>
                       <h2 className="font-editorial text-2xl sm:text-[28px] font-medium text-ink leading-tight">{phase.title[locale]}</h2>
                       <p className="text-sm text-muted">{phase.objective[locale]}</p>
@@ -334,7 +357,7 @@ export default function RoadmapWorkspacePage() {
                                   setTutorNode(mod);
                                   setTutorStep(null);
                                 }}
-                                className="inline-flex items-center gap-2 h-9 rounded-none border border-ink/12 px-4 text-xs font-medium text-ink hover:bg-accent hover:text-on-accent hover:border-accent transition-colors whitespace-nowrap shrink-0 self-start cursor-pointer"
+                                className="inline-flex items-center gap-2 h-9 rounded-full border border-ink/12 px-4 text-xs font-medium text-ink hover:bg-accent hover:text-on-accent hover:border-accent transition-colors whitespace-nowrap shrink-0 self-start cursor-pointer"
                               >
                                 <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{dict.roadmap.askTutor}</span>
@@ -386,7 +409,7 @@ export default function RoadmapWorkspacePage() {
                                         data-open
                                         tabIndex={-1}
                                         aria-label={`${dict.roadmap.askTutor}: ${step.title[locale]}`}
-                                        className="w-8 h-8 rounded-none grid place-items-center text-muted hover:text-ink hover:bg-surface transition-all shrink-0 cursor-pointer sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
+                                        className="w-8 h-8 rounded-full grid place-items-center text-muted hover:text-ink hover:bg-surface transition-all shrink-0 cursor-pointer sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
                                       >
                                         <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
                                       </button>
