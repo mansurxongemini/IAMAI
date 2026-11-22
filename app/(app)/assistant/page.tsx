@@ -51,11 +51,7 @@ export default function AssistantPage() {
     e.preventDefault();
     const trimmed = rawInput.trim();
     if (trimmed.length < 4) {
-      setPlanError(
-        locale === 'uz'
-          ? 'Kamida bitta vazifa yoki majburiyat kiriting.'
-          : 'Please enter at least one task or obligation to sequence.'
-      );
+      setPlanError(dict.errors.sequenceTooShort);
       return;
     }
 
@@ -72,7 +68,7 @@ export default function AssistantPage() {
           ownerId: user?.uid ?? 'local-executive',
         });
       if (!resOk) {
-        throw new Error(data.error || 'Failed to sequence tasks.');
+        throw new Error(data.error || dict.errors.sequenceFailed);
       }
       if (data.dayBrief) setDayBrief(data.dayBrief);
       if (Array.isArray(data.tasks) && data.tasks.length > 0) {
@@ -80,7 +76,7 @@ export default function AssistantPage() {
       }
       setRawInput('');
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : 'Unable to decompose tasks.');
+      setPlanError(err instanceof Error ? err.message : dict.errors.sequenceFailed);
     } finally {
       setSequencing(false);
     }
@@ -96,7 +92,7 @@ export default function AssistantPage() {
     try {
       await sendMentorMessage(mentorRole, trimmed);
     } catch (err) {
-      setMentorError(err instanceof Error ? err.message : 'Mentor request failed.');
+      setMentorError(err instanceof Error ? err.message : dict.errors.mentorFailed);
     } finally {
       setMentorLoading(false);
     }
@@ -120,7 +116,7 @@ export default function AssistantPage() {
 
           <div
             role="tablist"
-            aria-label="Assistant mode"
+            aria-label={dict.a11y.assistantMode}
             className="glass-surface rounded-none p-1 inline-flex items-center gap-1 self-start sm:self-end shrink-0"
           >
             <button
@@ -308,7 +304,7 @@ export default function AssistantPage() {
             {/* Role Selector Bar */}
             <div className="px-6 py-4 border-b border-ink/8 flex flex-wrap items-center justify-between gap-3 bg-surface/50">
               <span className="text-xs text-muted">{dict.assistant.mentorRoleLabel}</span>
-              <div role="group" aria-label="Mentor role" className="flex flex-wrap gap-1.5">
+              <div role="group" aria-label={dict.a11y.mentorRole} className="flex flex-wrap gap-1.5">
                 {(['executive', 'rhetoric', 'legal', 'exam'] as const).map((r) => (
                   <button
                     key={r}
@@ -340,49 +336,7 @@ export default function AssistantPage() {
                     <p className="text-sm text-muted">{dict.assistant.mentorEmpty}</p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left">
-                    {(
-                      {
-                        executive:
-                          locale === 'uz'
-                            ? [
-                                'Bugungi 3 ta eng muhim strategik ustuvorligimni qanday ajratay?',
-                                '5 daqiqalik rahbariyat brifingi tuzilmasini bering.',
-                              ]
-                            : [
-                                'How should I sequence 3 competing executive deadlines today?',
-                                'Give me a crisp 5-minute board briefing structure.',
-                              ],
-                        rhetoric:
-                          locale === 'uz'
-                            ? [
-                                'TEDx nutqim uchun ilk 30 soniyalik kuchli ilgak tuzib bering.',
-                                'Qarshi soʻroqda chalgʻituvchi guvohni qanday toʻxtataman?',
-                              ]
-                            : [
-                                'How do I stop a hostile witness from giving long speeches?',
-                                'Help me craft a zero-preamble 30-second TEDx opening hook.',
-                              ],
-                        legal:
-                          locale === 'uz'
-                            ? [
-                                'Bar Exam MEE uchun 30 daqiqalik IRAC qolipini tushuntiring.',
-                                'TOLES shartnomasida indemnity va warranty farqi nimada?',
-                              ]
-                            : [
-                                'Contrast warranty, representation, and indemnity for TOLES.',
-                                'How do I pace a 90-minute MPT closed-universe brief?',
-                              ],
-                        exam:
-                          locale === 'uz'
-                            ? [
-                                'IELTS Writing Task 2 da Band 6.5 dan 7.5 ga chiqish kaliti nima?',
-                                'Digital SAT 2-modulda vaqtni qanday boshqaray?',
-                              ]
-                            : [
-                                'What separates Band 6.5 from Band 7.5+ in IELTS Task 2?',
-                                'Give me a 2-pass timing system for hard Digital SAT Module 2.',
-                              ],
-                      }[mentorRole]
+                    {(dict.mentorPrompts[mentorRole]
                     ).map((starter) => (
                       <button
                         key={starter}

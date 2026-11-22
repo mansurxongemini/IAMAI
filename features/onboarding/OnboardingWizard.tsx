@@ -15,12 +15,13 @@ import { cn } from '@/lib/utils';
 import { AppShell } from '@/components/AppShell';
 import { Topbar } from '@/components/workspace/Topbar';
 import { CATEGORY_ICON } from '@/features/goals/GoalCatalog';
-import { onboardingCopy, presetsFor } from '@/features/goals/copy';
+import { presetsFor } from '@/features/goals/presets';
 import { TRACK_PHOTO } from '@/features/goals/photos';
+import { getDictionary } from '@core/i18n';
 
 const TOTAL = 4;
 
-function ChoiceGrid({ options, value, onPick }: { options: string[]; value: string; onPick: (v: string) => void }) {
+function ChoiceGrid({ options, value, onPick }: { options: readonly string[]; value: string; onPick: (v: string) => void }) {
   return (
     <div className="grid grid-cols-2 gap-2.5">
       {options.map((o) => {
@@ -47,7 +48,8 @@ function ChoiceGrid({ options, value, onPick }: { options: string[]; value: stri
 export function OnboardingWizard({ goalId }: { goalId: string }) {
   const router = useRouter();
   const { locale, profile, addRoadmap } = useWorkspace();
-  const c = onboardingCopy(locale);
+  const d = getDictionary(locale);
+  const c = d.onboarding;
   const entry = getCatalogEntry(goalId);
 
   const [step, setStep] = useState(0);
@@ -68,7 +70,7 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
     );
   }
 
-  const presets = presetsFor(entry.id, entry.category);
+  const presets = presetsFor(entry.id, entry.category, d);
   const Icon = CATEGORY_ICON[entry.category];
   const canNext = step === 0 ? level.trim().length >= 2 : step === 1 ? target.trim().length >= 2 : true;
 
@@ -122,7 +124,7 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
 
   return (
     <>
-    <Topbar crumbs={[{ label: locale === 'uz' ? 'Maqsadlar' : 'Goals', href: '/goals' }, { label: entry.title[locale] }]} />
+    <Topbar crumbs={[{ label: d.shell.goals, href: '/goals' }, { label: entry.title[locale] }]} />
     <AppShell wide>
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-y-10 lg:gap-x-6 items-start">
     <div className="lg:col-span-6 space-y-8 page-enter" onKeyDown={(e) => e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement) && next()}>
@@ -154,14 +156,14 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
         {step === 0 && (
           <>
             <h1 className="font-editorial text-4xl font-medium tracking-tight text-ink">{c.levelQ}</h1>
-            <ChoiceGrid options={presets.current.map((o) => o[locale])} value={level} onPick={setLevel} />
+            <ChoiceGrid options={presets.current} value={level} onPick={setLevel} />
             <Input value={level} onChange={(e) => setLevel(e.target.value)} placeholder={c.custom} maxLength={200} aria-label={c.levelHint} />
           </>
         )}
         {step === 1 && (
           <>
             <h1 className="font-editorial text-4xl font-medium tracking-tight text-ink">{c.targetQ}</h1>
-            <ChoiceGrid options={presets.target.map((o) => o[locale])} value={target} onPick={setTarget} />
+            <ChoiceGrid options={presets.target} value={target} onPick={setTarget} />
             <Input value={target} onChange={(e) => setTarget(e.target.value)} placeholder={c.custom} maxLength={200} aria-label={c.targetHint} />
           </>
         )}
@@ -202,16 +204,16 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
 
     <aside className="hidden lg:block lg:col-start-8 lg:col-span-5 sticky top-24">
       <div className="relative aspect-[4/5] overflow-hidden rounded-none">
-        <Image src={TRACK_PHOTO[entry.category].src} alt={TRACK_PHOTO[entry.category].alt[locale]} fill sizes="40vw" className="object-cover" />
+        <Image src={TRACK_PHOTO[entry.category].src} alt={d.photos[entry.category]} fill sizes="40vw" className="object-cover" />
         <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" aria-hidden="true" />
         <div className="absolute inset-x-0 bottom-0 p-7 text-white space-y-3">
           <p className="text-[12px] font-mono-tabular tracking-wide text-white/70">{entry.code}</p>
           <p className="text-[28px] leading-tight font-medium tracking-[-0.03em]">{entry.title[locale]}</p>
           <p className="text-[14px] leading-relaxed text-white/80">{entry.subtitle[locale]}</p>
           <dl className="grid grid-cols-3 gap-4 border-t border-white/20 pt-4 font-mono-tabular">
-            <div><dt className="text-[11px] text-white/60">{locale === 'uz' ? 'hafta' : 'weeks'}</dt><dd className="text-[20px]">{entry.recommendedWeeks}</dd></div>
-            <div><dt className="text-[11px] text-white/60">{locale === 'uz' ? 'soat' : 'hours'}</dt><dd className="text-[20px]">{entry.baselineTotalHours}</dd></div>
-            <div><dt className="text-[11px] text-white/60">{locale === 'uz' ? 'qadam' : 'steps'}</dt><dd className="text-[20px]">{entry.steps}</dd></div>
+            <div><dt className="text-[11px] text-white/60">{c.weeks}</dt><dd className="text-[20px]">{entry.recommendedWeeks}</dd></div>
+            <div><dt className="text-[11px] text-white/60">{c.hours}</dt><dd className="text-[20px]">{entry.baselineTotalHours}</dd></div>
+            <div><dt className="text-[11px] text-white/60">{c.steps}</dt><dd className="text-[20px]">{entry.steps}</dd></div>
           </dl>
         </div>
       </div>

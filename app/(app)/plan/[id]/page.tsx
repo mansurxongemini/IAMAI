@@ -158,7 +158,7 @@ export default function RoadmapWorkspacePage() {
   }
 
   return (
-    <><Topbar crumbs={[{ label: locale === 'uz' ? 'Rejalar' : 'Plans', href: '/today' }, { label: rm.title[locale] }]} /><AppShell wide>
+    <><Topbar crumbs={[{ label: dict.shell.plans, href: '/today' }, { label: rm.title[locale] }]} /><AppShell wide>
       <div className="space-y-6 page-enter">
         <div className="flex items-center justify-between gap-4">
           <Link href="/today" className="inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink transition-colors">

@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import type { DailyTask, NodeChatMessage, Roadmap, UserProfile } from '@core/schemas';
 import { db, handleFirestoreError, OperationType } from './firebase';
+import { DICTIONARIES } from '@core/i18n';
 
 function toIsoString(value: unknown): string {
   if (value instanceof Timestamp) {
@@ -92,7 +93,7 @@ export function subscribeUserProfile(
       const d = snap.data();
       onData({
         uid: String(d.uid),
-        displayName: String(d.displayName ?? 'Executive Member'),
+        displayName: String(d.displayName ?? DICTIONARIES.en.common.member),
         email: String(d.email ?? ''),
         photoURL: typeof d.photoURL === 'string' ? d.photoURL : undefined,
         locale: d.locale === 'uz' ? 'uz' : 'en',

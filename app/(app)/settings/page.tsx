@@ -39,7 +39,7 @@ export default function SettingsPage() {
         .slice(0, 10);
 
       await saveProfile({
-        displayName: displayName.trim() || 'Executive Member',
+        displayName: displayName.trim() || dict.common.member,
         locale,
         dailyHours: Math.min(12, Math.max(0.5, Number(dailyHours) || 2)),
         busyWindows: parsedWindows,
@@ -58,7 +58,7 @@ export default function SettingsPage() {
     try {
       await signIn();
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Unable to sign in with Google.');
+      setAuthError(err instanceof Error ? err.message : dict.errors.signInFailed);
     }
   }
 
@@ -66,7 +66,7 @@ export default function SettingsPage() {
     <><Topbar crumbs={[{ label: dict.nav.settings }]} /><AppShell>
       <div className="max-w-3xl space-y-8 page-enter">
         <header className="space-y-1.5">
-          <p className="text-xs text-accent">EN / UZ · Firestore Offline Sync</p>
+          <p className="text-xs text-accent">{dict.settings.eyebrow}</p>
           <h1 className="font-editorial text-4xl sm:text-5xl font-medium tracking-tight text-ink">
             {dict.settings.title}
           </h1>
@@ -76,8 +76,8 @@ export default function SettingsPage() {
         {/* Theme */}
         <section className="glass-surface rounded-3xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-xl font-medium tracking-tight text-ink">{locale === 'uz' ? 'Mavzu' : 'Theme'}</h2>
-            <p className="text-xs text-muted">{locale === 'uz' ? 'Tizimga qarab, oq yoki qora.' : 'Follow the system, or pick light or dark.'}</p>
+            <h2 className="text-xl font-medium tracking-tight text-ink">{dict.theme.title}</h2>
+            <p className="text-xs text-muted">{dict.theme.desc}</p>
           </div>
           <ThemeSegmented locale={locale} />
         </section>
@@ -103,7 +103,7 @@ export default function SettingsPage() {
                 locale === 'en' ? 'bg-accent text-on-accent' : 'text-muted hover:text-ink'
               }`}
             >
-              English (EN)
+              {dict.languages.en}
             </button>
             <button
               type="button"
@@ -112,7 +112,7 @@ export default function SettingsPage() {
                 locale === 'uz' ? 'bg-accent text-on-accent' : 'text-muted hover:text-ink'
               }`}
             >
-              Oʻzbekcha (UZ)
+              {dict.languages.uz}
             </button>
           </div>
         </section>

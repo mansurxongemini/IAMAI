@@ -3,13 +3,10 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme, type ThemeChoice } from '@/lib/theme';
 import { cn } from '@/lib/utils';
+import { getDictionary } from '@core/i18n';
 
 const ORDER: ThemeChoice[] = ['system', 'light', 'dark'];
 const ICON = { system: Monitor, light: Sun, dark: Moon } as const;
-const LABEL = {
-  en: { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' },
-  uz: { system: 'Mavzu: tizimga qarab', light: 'Mavzu: oq', dark: 'Mavzu: qora' },
-} as const;
 
 /** One button that cycles system → light → dark. */
 export function ThemeToggle({ locale, className }: { locale: 'en' | 'uz'; className?: string }) {
@@ -20,8 +17,8 @@ export function ThemeToggle({ locale, className }: { locale: 'en' | 'uz'; classN
     <button
       type="button"
       onClick={() => set(next)}
-      aria-label={LABEL[locale][choice]}
-      title={LABEL[locale][choice]}
+      aria-label={getDictionary(locale).theme.toggle[choice]}
+      title={getDictionary(locale).theme.toggle[choice]}
       className={cn('h-11 w-11 grid place-items-center rounded-none text-muted hover:text-ink hover:bg-surface/70 transition-colors cursor-pointer', className)}
     >
       <Icon className="w-[18px] h-[18px]" aria-hidden="true" />
@@ -32,9 +29,10 @@ export function ThemeToggle({ locale, className }: { locale: 'en' | 'uz'; classN
 /** Three-way segmented control for the settings page. */
 export function ThemeSegmented({ locale }: { locale: 'en' | 'uz' }) {
   const { choice, set } = useTheme();
-  const names = locale === 'uz' ? { system: 'Tizim', light: 'Oq', dark: 'Qora' } : { system: 'System', light: 'Light', dark: 'Dark' };
+  const t = getDictionary(locale).theme;
+  const names = t.names;
   return (
-    <div role="radiogroup" aria-label={locale === 'uz' ? 'Mavzu' : 'Theme'} className="inline-flex rounded-none bg-surface border border-ink/10 p-1 gap-1">
+    <div role="radiogroup" aria-label={t.group} className="inline-flex rounded-none bg-surface border border-ink/10 p-1 gap-1">
       {ORDER.map((o) => {
         const Icon = ICON[o];
         const on = o === choice;

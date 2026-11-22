@@ -17,7 +17,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { localDay, useActivity } from './activity';
-import { todayCopy } from './copy';
+import { getDictionary } from '@core/i18n';
 
 interface TodayItem {
   moduleId: string;
@@ -71,7 +71,8 @@ function StatusButton({ done, onToggle, label }: { done: boolean; onToggle: () =
 export function TodayView() {
   const router = useRouter();
   const { locale, roadmaps, tasks, toggleStep, toggleTask, hydrated, user } = useWorkspace();
-  const c = todayCopy(locale);
+  const d = getDictionary(locale);
+  const c = d.today;
   const { streak, todayIds, last7 } = useActivity();
   const listRef = useRef<HTMLDivElement>(null);
   useListKeys(listRef);
@@ -83,7 +84,7 @@ export function TodayView() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? c.morning : hour < 18 ? c.afternoon : c.evening;
   const firstName = user?.displayName?.split(' ')[0];
-  const dateLabel = new Date().toLocaleDateString(locale === 'uz' ? 'uz-UZ' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dateLabel = new Date().toLocaleDateString(d.common.dateLocale, { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <>
@@ -125,7 +126,7 @@ export function TodayView() {
           ) : active.length === 0 ? (
             <Card className="overflow-hidden grid grid-cols-1 md:grid-cols-2">
               <div className="relative min-h-[220px] md:min-h-[340px]">
-                <Image src="/photos/library.webp" alt={locale === 'uz' ? 'Sokin kutubxona oʻqish zali' : 'A quiet library reading room'} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+                <Image src="/photos/library.webp" alt={d.photos.library} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
               </div>
               <div className="p-8 sm:p-10 flex flex-col justify-center items-start gap-5">
                 <h2 className="text-[28px] sm:text-[34px] leading-[1.05] font-medium tracking-[-0.03em] text-ink">{c.emptyTitle}</h2>

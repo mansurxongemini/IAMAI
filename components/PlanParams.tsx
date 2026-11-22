@@ -1,17 +1,7 @@
 'use client';
 
 import type { Locale } from '@core/schemas';
-
-const COPY = {
-  en: {
-    days: 'd', hrs: 'h', target: 'Target date', capacity: 'Time budget', of: 'of',
-    comfortable: 'Comfortable', intensive: 'Intensive', compressed: 'Compressed — Gemini will prioritise',
-  },
-  uz: {
-    days: 'kun', hrs: 'soat', target: 'Maqsad sanasi', capacity: 'Vaqt hajmi', of: '/',
-    comfortable: 'Bemalol', intensive: 'Jadal', compressed: 'Siqilgan — Gemini ustuvorlarini tanlaydi',
-  },
-} as const;
+import { getDictionary } from '@core/i18n';
 
 function Chips<T extends number>({
   options, value, onChange, suffix, label,
@@ -54,12 +44,13 @@ export function PlanParams({
   hoursLabel: string;
   dayOptions: readonly number[];
 }) {
-  const c = COPY[locale];
+  const d = getDictionary(locale);
+  const c = d.params;
   const available = Math.round(deadlineDays * dailyHours);
   const ratio = baselineHours > 0 ? available / baselineHours : 1;
   const status = ratio >= 1 ? c.comfortable : ratio >= 0.7 ? c.intensive : c.compressed;
   const tone = ratio >= 1 ? 'var(--c-success)' : ratio >= 0.7 ? 'var(--c-accent)' : 'var(--c-warn)';
-  const target = new Date(Date.now() + deadlineDays * 86_400_000).toLocaleDateString(locale === 'uz' ? 'uz-UZ' : 'en-GB', {
+  const target = new Date(Date.now() + deadlineDays * 86_400_000).toLocaleDateString(d.common.dateLocale, {
     day: 'numeric', month: 'short', year: 'numeric',
   });
 

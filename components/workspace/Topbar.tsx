@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import { getDictionary } from '@core/i18n';
+import { useWorkspace } from '@/components/WorkspaceProvider';
 
 export interface Crumb {
   label: string;
@@ -11,9 +13,10 @@ export interface Crumb {
 
 /** Page header bar, Linear-style: breadcrumb on the left, actions on the right. */
 export function Topbar({ crumbs, actions }: { crumbs: Crumb[]; actions?: React.ReactNode }) {
+  const { locale } = useWorkspace();
   return (
     <div className="sticky top-12 lg:top-0 z-30 flex items-center gap-3 h-12 px-4 sm:px-6 border-b border-ink/[0.07] bg-canvas/85 backdrop-blur-md">
-      <nav aria-label="Breadcrumb" className="flex-1 min-w-0">
+      <nav aria-label={getDictionary(locale).a11y.breadcrumb} className="flex-1 min-w-0">
         <ol className="flex items-center gap-1.5 text-[13px] min-w-0">
           {crumbs.map((c, i) => {
             const last = i === crumbs.length - 1;

@@ -3,6 +3,7 @@ import type { Viewport } from 'next';
 import localFont from 'next/font/local';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WorkspaceProvider } from '@/components/WorkspaceProvider';
+import { DICTIONARIES } from '@core/i18n';
 import './globals.css';
 
 // Self-hosted fonts (no build-time Google Fonts request, works offline). One system for the
@@ -33,21 +34,14 @@ const martian = localFont({
   fallback: ['ui-monospace', 'monospace'],
 });
 
+const meta = DICTIONARIES.en.meta;
+
 export const metadata: Metadata = {
-  title: 'IAM AI — personal study plans for IELTS, SAT, LSAT and the Bar',
-  description:
-    'Pick a goal — IELTS, SAT, TOEFL, LSAT, SQE, the Bar, TOLES or public speaking — and get a day-by-day plan built around your level, deadline and schedule, with an AI tutor on every step. English and Uzbek.',
+  title: meta.title,
+  description: meta.description,
   applicationName: 'IAM AI',
-  openGraph: {
-    title: 'IAM AI — personal study plans for IELTS, SAT, LSAT and the Bar',
-    description: 'A day-by-day plan for your exam or speaking goal, with an AI tutor on every step.',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'IAM AI — personal study plans for IELTS, SAT, LSAT and the Bar',
-    description: 'A day-by-day plan for your exam or speaking goal, with an AI tutor on every step.',
-  },
+  openGraph: { title: meta.title, description: meta.shareDescription, type: 'website' },
+  twitter: { card: 'summary_large_image', title: meta.title, description: meta.shareDescription },
 };
 
 // Runs before paint: theme (saved choice, else dark — the landing's ground) and the hero-entrance flag. No flash.

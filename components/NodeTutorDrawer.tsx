@@ -52,7 +52,7 @@ export function NodeTutorDrawer({
         question: trimmed,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to reach AI Tutor.');
+      setError(err instanceof Error ? err.message : dict.errors.tutorFailed);
     } finally {
       setLoading(false);
     }

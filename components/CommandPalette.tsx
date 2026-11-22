@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useWorkspace } from './WorkspaceProvider';
+import { getDictionary } from '@core/i18n';
 
 interface Command {
   id: string;
@@ -17,15 +18,11 @@ interface Command {
   run: () => void;
 }
 
-const COPY = {
-  en: { placeholder: 'Search pages, plans, actions…', go: 'Go to', plans: 'Roadmaps', actions: 'Actions', lang: 'Switch to Uzbek', empty: 'No results', newPlan: 'New certification plan', newTalk: 'New rhetoric plan' },
-  uz: { placeholder: 'Sahifa, reja yoki amalni qidiring…', go: 'Oʻtish', plans: 'Yoʻl xaritalari', actions: 'Amallar', lang: 'Ingliz tiliga oʻtish', empty: 'Hech narsa topilmadi', newPlan: 'Yangi sertifikat rejasi', newTalk: 'Yangi notiqlik rejasi' },
-} as const;
-
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const { dict, locale, setLocale, roadmaps, user, signIn, signOut } = useWorkspace();
-  const c = COPY[locale];
+  const d = getDictionary(locale);
+  const c = d.palette;
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,8 +32,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   const commands = useMemo<Command[]>(() => {
     const list: Command[] = [
-      { id: 'nav-today', label: locale === 'uz' ? 'Bugun' : 'Today', group: c.go, icon: Sun, keywords: 'today bugun', run: go('/today') },
-      { id: 'nav-goals', label: locale === 'uz' ? 'Maqsadlar' : 'Goals', group: c.go, icon: Compass, keywords: 'ielts sat toefl lsat sqe bar toles tedx', run: go('/goals') },
+      { id: 'nav-today', label: d.shell.today, group: c.go, icon: Sun, keywords: 'today bugun', run: go('/today') },
+      { id: 'nav-goals', label: d.shell.goals, group: c.go, icon: Compass, keywords: 'ielts sat toefl lsat sqe bar toles tedx', run: go('/goals') },
       { id: 'nav-asst', label: dict.nav.assistant, group: c.go, icon: ListChecks, keywords: 'tasks vazifa', run: go('/assistant') },
       { id: 'nav-set', label: dict.nav.settings, group: c.go, icon: Settings, run: go('/settings') },
     ];
@@ -46,7 +43,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     list.push(
       { id: 'act-cert', label: c.newPlan, group: c.actions, icon: BookOpen, run: go('/goals?c=academic') },
       { id: 'act-talk', label: c.newTalk, group: c.actions, icon: Mic, run: go('/goals?c=rhetoric') },
-      { id: 'act-lang', label: locale === 'en' ? c.lang : COPY.uz.lang, group: c.actions, icon: Languages, keywords: 'language til en uz', run: () => setLocale(locale === 'en' ? 'uz' : 'en') },
+      { id: 'act-lang', label: c.lang, group: c.actions, icon: Languages, keywords: 'language til en uz', run: () => setLocale(locale === 'en' ? 'uz' : 'en') },
       user
         ? { id: 'act-out', label: dict.nav.signOut, group: c.actions, icon: LogOut, run: () => void signOut() }
         : { id: 'act-in', label: dict.nav.signIn, group: c.actions, icon: LogIn, run: () => void signIn() },
@@ -99,8 +96,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   let lastGroup = '';
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[14vh]" role="dialog" aria-modal="true" aria-label="Command palette">
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-ink/20 backdrop-blur-[2px] animate-fade-in cursor-default" />
+    <div className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[14vh]" role="dialog" aria-modal="true" aria-label={d.a11y.commandPalette}>
+      <button type="button" aria-label={d.a11y.close} onClick={onClose} className="absolute inset-0 bg-ink/20 backdrop-blur-[2px] animate-fade-in cursor-default" />
       <div className="relative w-full max-w-xl rounded-3xl bg-surface border border-ink/10 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45)] overflow-hidden animate-scale-in" onKeyDown={onKeyDown}>
         <div className="flex items-center gap-3 px-5 h-14 border-b border-ink/10">
           <Search className="w-4 h-4 text-muted" aria-hidden="true" />

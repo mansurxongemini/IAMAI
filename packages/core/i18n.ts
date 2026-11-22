@@ -1,520 +1,699 @@
-import type { Locale } from './schemas';
+import type { BlueprintCategory, Locale } from './schemas';
 
-export interface Dictionary {
-  brand: string;
+/*
+  Every interface string of IAM AI lives in this file: landing, sign-in, workspace, onboarding,
+  errors, accessibility labels and page metadata. Edit `en` and `uz` side by side. A key added to
+  `en` but missing from `uz` fails the type-check, so a language can never fall behind silently.
+
+  Not here, on purpose: curriculum content (packages/core/blueprints, bilingual data per goal)
+  and the AI's own instructions (packages/core/prompts.ts). Those are content, not interface text.
+*/
+
+/** Literal types from `as const` widened to string, so `uz` can hold its own text. */
+type Widen<T> = T extends string
+  ? string
+  : T extends (...args: infer A) => infer R
+    ? (...args: A) => Widen<R>
+    : T extends readonly (infer U)[]
+      ? readonly Widen<U>[]
+      : T extends object
+        ? { readonly [K in keyof T]: Widen<T[K]> }
+        : T;
+
+const en = {
   nav: {
-    dashboard: string;
-    rhetoric: string;
-    certifications: string;
-    assistant: string;
-    settings: string;
-    signIn: string;
-    signOut: string;
-  };
+    dashboard: 'Overview',
+    rhetoric: 'Speaking',
+    certifications: 'Exams',
+    assistant: 'Assistant',
+    settings: 'Settings',
+    signIn: 'Sign in',
+    signOut: 'Sign out',
+  },
   dashboard: {
-    greeting: string;
-    subtitle: string;
-    activeRoadmaps: string;
-    todaySchedule: string;
-    quickCaptureTitle: string;
-    quickCapturePlaceholder: string;
-    quickCaptureAction: string;
+    greeting: 'Your Workspace',
+    subtitle: 'Your study plans, practice routines, and daily schedule in one place.',
+    activeRoadmaps: 'Active plans',
+    todaySchedule: 'Today’s plan',
+    quickCaptureTitle: 'Plan out your day',
+    quickCapturePlaceholder: 'Finish the investor memo, 45 min IELTS Writing practice, review contract edits...',
+    quickCaptureAction: 'Organize my day',
     metrics: {
-      activePlans: string;
-      completionRate: string;
-      scheduledHours: string;
-      tasksCompleted: string;
-    };
-    openWorkspace: string;
-    openAssistant: string;
-    newRoadmap: string;
-    noRoadmaps: string;
-    noTasks: string;
-    daysLeft: string;
-    completed: string;
-    syncCloud: string;
-    localWorkspace: string;
-  };
-  rhetoric: {
-    title: string;
-    subtitle: string;
-    selectArchetype: string;
-    configureTitle: string;
-    currentLevelLabel: string;
-    currentLevelPlaceholder: string;
-    targetGoalLabel: string;
-    targetGoalPlaceholder: string;
-    deadlineLabel: string;
-    dailyHoursLabel: string;
-    focusLabel: string;
-    focusPlaceholder: string;
-    generateAction: string;
-    generating: string;
-    phasesCount: string;
-    hoursEstimate: string;
-  };
-  certifications: {
-    title: string;
-    subtitle: string;
-    filterAll: string;
-    filterAcademic: string;
-    filterLegal: string;
-    academicLabel: string;
-    legalLabel: string;
-    currentScoreLabel: string;
-    currentScorePlaceholder: string;
-    targetScoreLabel: string;
-    targetScorePlaceholder: string;
-    deadlineLabel: string;
-    dailyHoursLabel: string;
-    weakAreasLabel: string;
-    weakAreasPlaceholder: string;
-    generateAction: string;
-    generating: string;
-    selectedBlueprint: string;
-  };
+      activePlans: 'Active plans',
+      completionRate: 'Overall progress',
+      scheduledHours: 'Planned hours',
+      tasksCompleted: 'Done today',
+    },
+    openWorkspace: 'Open plan',
+    openAssistant: 'Open assistant',
+    newRoadmap: 'New plan',
+    noRoadmaps: 'You don’t have any active plans yet. Pick a speaking track or an exam to get started.',
+    noTasks: 'Nothing scheduled for today yet. Drop in your tasks above and we’ll sort them out.',
+    daysLeft: 'days left',
+    completed: 'done',
+    syncCloud: 'Synced',
+    localWorkspace: 'Saved on this device',
+  },
   roadmap: {
-    backToDashboard: string;
-    strategyBrief: string;
-    dailySlot: string;
-    overallProgress: string;
-    stepsCompleted: string;
-    allocatedHours: string;
-    deadline: string;
-    askTutor: string;
-    tutorTitle: string;
-    tutorSubtitle: string;
-    tutorPlaceholder: string;
-    tutorSend: string;
-    tutorEmpty: string;
-    tutorPrompt1: string;
-    tutorPrompt2: string;
-    skippedLabel: string;
-    highPriority: string;
-    normalPriority: string;
-    lowPriority: string;
-    notFound: string;
-    deleteRoadmap: string;
-    cachedNote: string;
-    daysLeft: string;
-    onTrack: string;
-    behind: string;
-    ahead: string;
-    current: string;
-    continueNext: string;
-    phaseDone: string;
-    confirmArchive: string;
-    phases: string;
-    minutesShort: string;
-  };
+    backToDashboard: 'Back to overview',
+    strategyBrief: 'How this plan works',
+    dailySlot: 'Best time to practice',
+    overallProgress: 'Progress',
+    stepsCompleted: 'Steps done',
+    allocatedHours: 'Total hours',
+    deadline: 'Target date',
+    askTutor: 'Ask tutor',
+    tutorTitle: 'Step Tutor',
+    tutorSubtitle: 'Focused strictly on this step and your goal.',
+    tutorPlaceholder: 'Ask anything about this step...',
+    tutorSend: 'Ask',
+    tutorEmpty: 'Stuck on something? Ask for a quick exercise, an example, or common mistakes to avoid.',
+    tutorPrompt1: 'Give me a quick 10-minute practice drill for this.',
+    tutorPrompt2: 'What mistake trips people up most here?',
+    skippedLabel: 'Skipped',
+    highPriority: 'High priority',
+    normalPriority: 'Essential',
+    lowPriority: 'Quick review',
+    notFound: 'We couldn’t find this plan.',
+    deleteRoadmap: 'Archive plan',
+    cachedNote: 'Loaded from saved notes',
+    daysLeft: 'days left',
+    onTrack: 'Right on track',
+    behind: '{n} steps behind',
+    ahead: '{n} steps ahead',
+    current: 'Up next',
+    continueNext: 'Continue',
+    phaseDone: 'Done',
+    confirmArchive: 'Yes, archive it',
+    phases: 'Stages',
+    minutesShort: 'min',
+  },
   assistant: {
-    title: string;
-    subtitle: string;
-    tabPlanner: string;
-    tabMentor: string;
-    inputLabel: string;
-    inputPlaceholder: string;
-    sequenceAction: string;
-    sequencing: string;
-    dayBrief: string;
-    executionSteps: string;
-    simplification: string;
-    clearCompleted: string;
-    mentorRoleLabel: string;
+    title: 'Personal Assistant',
+    subtitle: 'Turn a messy to-do list into a clear schedule, or talk things through with your mentor.',
+    tabPlanner: 'Day Planner',
+    tabMentor: 'Mentor Chat',
+    inputLabel: 'What’s on your plate?',
+    inputPlaceholder:
+      'List everything you need to get done — e.g., Finish legal memo by 5 PM, prep 5-min board update, 90 min LSAT practice, gym at 6:30...',
+    sequenceAction: 'Plan my day',
+    sequencing: 'Sorting out your day...',
+    dayBrief: 'Game plan',
+    executionSteps: 'How to tackle it',
+    simplification: 'Shortcut',
+    clearCompleted: 'Clear done',
+    mentorRoleLabel: 'Who do you want to talk to?',
     roles: {
-      executive: string;
-      rhetoric: string;
-      legal: string;
-      exam: string;
-    };
-    mentorPlaceholder: string;
-    mentorSend: string;
-    mentorEmpty: string;
-  };
+      executive: 'Strategy & Focus',
+      rhetoric: 'Speaking & Debate',
+      legal: 'Law & Bar Prep',
+      exam: 'Exam Coach',
+    },
+    mentorPlaceholder: 'Ask for speech feedback, a legal breakdown, or help untangling a problem...',
+    mentorSend: 'Send',
+    mentorEmpty: 'Pick a mentor above and ask whatever is on your mind.',
+  },
   settings: {
-    title: string;
-    subtitle: string;
-    languageTitle: string;
-    languageDesc: string;
-    availabilityTitle: string;
-    dailyHoursLabel: string;
-    startTimeLabel: string;
-    endTimeLabel: string;
-    busyWindowsLabel: string;
-    busyWindowsPlaceholder: string;
-    saveProfile: string;
-    savedConfirmation: string;
-    accountTitle: string;
-    signedInAs: string;
-    guestMode: string;
-    connectGoogle: string;
-    disconnect: string;
-    offlineCacheTitle: string;
-    offlineCacheDesc: string;
-  };
-  login: {
-    headline: string;
-    subline: string;
-    googleButton: string;
-    continuePreview: string;
-    pillar1: string;
-    pillar2: string;
-    pillar3: string;
-  };
+    eyebrow: 'EN / UZ · Synced to your account',
+    title: 'Settings',
+    subtitle: 'Language, daily availability, and account sync.',
+    languageTitle: 'Language',
+    languageDesc: 'Applies to menus, study plans, and all mentor replies.',
+    availabilityTitle: 'Your daily schedule',
+    dailyHoursLabel: 'Usual study or practice hours per day',
+    startTimeLabel: 'Day starts',
+    endTimeLabel: 'Day ends',
+    busyWindowsLabel: 'Times you’re usually busy (comma-separated)',
+    busyWindowsPlaceholder: 'Mon-Fri 09:00-14:00, Tue/Thu 16:00-17:30',
+    saveProfile: 'Save changes',
+    savedConfirmation: 'Saved.',
+    accountTitle: 'Account & Sync',
+    signedInAs: 'Signed in as',
+    guestMode: 'Your work is saved on this device. Sign in with Google to sync across web and mobile.',
+    connectGoogle: 'Sign in with Google',
+    disconnect: 'Sign out',
+    offlineCacheTitle: 'Works offline',
+    offlineCacheDesc: 'Your plans and progress stay saved on your device and sync automatically once you’re back online.',
+  },
   common: {
-    days: string;
-    hours: string;
-    minutes: string;
-    retry: string;
-    close: string;
-    offlineBadge: string;
-  };
-}
-
-export const DICTIONARIES: Record<Locale, Dictionary> = {
-  en: {
-    brand: 'IAM AI',
-    nav: {
-      dashboard: 'Overview',
-      rhetoric: 'Rhetoric',
-      certifications: 'Certifications',
-      assistant: 'Assistant',
-      settings: 'Settings',
-      signIn: 'Sign in',
-      signOut: 'Sign out',
+    dateLocale: 'en-GB',
+    member: 'Member',
+    days: 'days',
+    hours: 'h',
+    minutes: 'min',
+    retry: 'Try again',
+    close: 'Close',
+    offlineBadge: 'Offline · saved version',
+  },
+  landing: {
+    nav: { method: 'Method', rail: 'Curricula', slip: 'Your plan', phases: 'Phases', faq: 'FAQ' },
+    skip: 'Skip to content',
+    signIn: 'Sign in',
+    start: 'Choose your goal',
+    continue: 'Open today',
+    lang: 'Oʻzbek tiliga oʻtish',
+    hero: {
+      kicker: 'Study, planned.',
+      brand: 'IAM AI',
+      sub: 'IELTS, SAT, LSAT, the Bar or public speaking. An expert curriculum, dated day by day around your deadline.',
+      meta: ['10 curricula', '150 steps', 'English · Uzbek', 'Free to start'],
+      scroll: 'Scroll',
     },
-    dashboard: {
-      greeting: 'Executive Workspace',
-      subtitle: 'Structured roadmaps, calibrated drills, and daily time-blocked execution.',
-      activeRoadmaps: 'Active Roadmaps',
-      todaySchedule: 'Today’s Sequence',
-      quickCaptureTitle: 'Sequence today’s obligations',
-      quickCapturePlaceholder: 'Draft investor brief, 45m IELTS Writing Task 2 drill, review contract redlines...',
-      quickCaptureAction: 'Build Schedule',
-      metrics: {
-        activePlans: 'Active Roadmaps',
-        completionRate: 'Milestone Progress',
-        scheduledHours: 'Planned Hours',
-        tasksCompleted: 'Today Completed',
-      },
-      openWorkspace: 'Open Roadmap',
-      openAssistant: 'Full Assistant',
-      newRoadmap: 'New Plan',
-      noRoadmaps: 'No active roadmaps yet. Select a rhetoric track or certification blueprint to begin.',
-      noTasks: 'No time-blocked tasks for today. Enter obligations to generate an execution sequence.',
-      daysLeft: 'days left',
-      completed: 'completed',
-      syncCloud: 'Cloud synced',
-      localWorkspace: 'Local cache active',
+    manifesto: {
+      eyebrow: '01 · Method',
+      line: 'Experts write it. Code dates it. AI only tunes it.',
     },
-    rhetoric: {
-      title: 'Rhetoric & Oratory Studio',
-      subtitle: 'Structured mastery modeled after TEDx speakers, trial advocates, and legislative statesmen.',
-      selectArchetype: 'Select Oratory Archetype',
-      configureTitle: 'Calibrate Blueprint',
-      currentLevelLabel: 'Current Speaking Baseline',
-      currentLevelPlaceholder: 'e.g., Clear in team meetings, rush pacing under formal Q&A',
-      targetGoalLabel: 'Target Performance Outcome',
-      targetGoalPlaceholder: 'e.g., Deliver 12-minute keynote with composed Q&A control',
-      deadlineLabel: 'Target Horizon (Days)',
-      dailyHoursLabel: 'Daily Practice Budget (Hours)',
-      focusLabel: 'Specific Weaknesses or Event Context',
-      focusPlaceholder: 'e.g., Cross-examination control, vocal pauses, opening hook',
-      generateAction: 'Generate Adapted Roadmap',
-      generating: 'Patching blueprint...',
-      phasesCount: 'phases',
-      hoursEstimate: 'h baseline',
+    rail: {
+      eyebrow: '02 · Curricula',
+      h2: 'Six of ten curricula',
+      hint: 'Scroll to walk the row',
+      names: { 'ielts-academic': 'IELTS Academic', 'sat-digital': 'Digital SAT', 'toefl-ibt': 'TOEFL iBT', lsat: 'LSAT', sqe: 'SQE 1 & 2', 'tedx-oratory': 'TEDx talk' } as Record<string, string>,
+      track: { academic: 'Exam', legal: 'Law', rhetoric: 'Speaking' },
+      weeks: (n: number) => `${n} wks`,
+      hours: (n: number) => `${n} h`,
     },
-    certifications: {
-      title: 'Certification & Legal Exam Tutor',
-      subtitle: 'Blueprint-first study systems for global academic exams and international legal qualifications.',
-      filterAll: 'All Tracks',
-      filterAcademic: 'Academic',
-      filterLegal: 'Legal & Law',
-      academicLabel: 'Academic',
-      legalLabel: 'Legal',
-      currentScoreLabel: 'Current Score / Baseline',
-      currentScorePlaceholder: 'e.g., Band 6.0 (Writing 5.5, Speaking 6.0)',
-      targetScoreLabel: 'Target Score / Qualification',
-      targetScorePlaceholder: 'e.g., Band 7.5+ Overall',
-      deadlineLabel: 'Exam Countdown (Days)',
-      dailyHoursLabel: 'Daily Study Hours',
-      weakAreasLabel: 'Weak Sections & Constraints',
-      weakAreasPlaceholder: 'e.g., Writing cohesion, timed passage pacing, evenings only',
-      generateAction: 'Adapt Certification Plan',
-      generating: 'Adapting syllabus...',
-      selectedBlueprint: 'Selected Blueprint',
+    slip: {
+      eyebrow: '03 · Your plan',
+      h2: 'A plan that prints itself',
+      lede: 'Four answers in, one dated plan out. The AI changes only what your level calls for; the rest stays as the experts wrote it.',
+      cues: ['Goal chosen', 'Level read', 'Delta applied', 'Days dated'],
+      status: [
+        'Reading goal · IELTS Academic',
+        'Level 6.0 → target 7.5 · weak area: Writing',
+        'Delta · +3 Writing modules · −1 Listening',
+        'Plan ready · today’s list torn off',
+      ],
+      head: 'IAM AI · Sample plan',
+      name: 'IELTS 7.5',
+      rows: ['Plan no.', 'AI delta', 'Dates'],
+      lot: 'IA-0412',
+      pending: 'pending',
+      delta: '+3 Writing / −1 Listening',
+      dates: '06 Jan → 18 Mar · 72 d',
+      stub: 'Today · 3 steps · 85 min',
     },
-    roadmap: {
-      backToDashboard: 'Overview',
-      strategyBrief: 'Adaptation Strategy',
-      dailySlot: 'Recommended Daily Block',
-      overallProgress: 'Overall Progress',
-      stepsCompleted: 'Steps Completed',
-      allocatedHours: 'Budgeted Hours',
-      deadline: 'Target Date',
-      askTutor: 'Ask AI Tutor',
-      tutorTitle: 'Node-Level AI Tutor',
-      tutorSubtitle: 'Scoped strictly to this module and your target outcome.',
-      tutorPlaceholder: 'Ask a tactical question about this step...',
-      tutorSend: 'Ask',
-      tutorEmpty: 'Ask a focused execution question on this module’s framework, drills, or common traps.',
-      tutorPrompt1: 'Give me a concrete 10-minute drill for this step.',
-      tutorPrompt2: 'What is the #1 mistake candidates make here?',
-      skippedLabel: 'Compressed / Skipped',
-      highPriority: 'High Priority',
-      normalPriority: 'Core Track',
-      lowPriority: 'Light Review',
-      notFound: 'Roadmap not found in your workspace.',
-      deleteRoadmap: 'Archive Plan',
-      cachedNote: 'Canonical answer served from cache',
-      daysLeft: 'days left',
-      onTrack: 'On track',
-      behind: 'Behind by {n} steps',
-      ahead: 'Ahead by {n} steps',
-      current: 'Current',
-      continueNext: 'Continue',
-      phaseDone: 'Complete',
-      confirmArchive: 'Confirm archive',
-      phases: 'Phases',
-      minutesShort: 'min',
+    phases: {
+      eyebrow: '04 · Phases',
+      h2: 'Every plan runs in three phases',
+      chapters: [
+        { l: 'Phase 1', t: 'Calibrate', d: 'A diagnostic, the format rules and the high-yield drills, set at your level.' },
+        { l: 'Phase 2', t: 'Build', d: 'Timed sections and targeted drills on the areas you marked weak.' },
+        { l: 'Phase 3', t: 'Simulate', d: 'Full mocks under exam timing, then an error log that closes the gaps.' },
+      ],
     },
-    assistant: {
-      title: 'Personal Execution Assistant',
-      subtitle: 'Transform raw obligations into time-blocked sequences or consult your multi-turn Executive Mentor.',
-      tabPlanner: 'Task Sequencer',
-      tabMentor: 'Executive Mentor Chat',
-      inputLabel: 'Daily or Weekly Obligations',
-      inputPlaceholder:
-        'List your tasks, meetings, and study goals (e.g., Finish legal compliance memo by 17:00, prepare 5-minute board briefing, 90m LSAT LR timed section, gym at 18:30)...',
-      sequenceAction: 'Sequence & Simplify',
-      sequencing: 'Sequencing day...',
-      dayBrief: 'Execution Brief',
-      executionSteps: 'How to Execute',
-      simplification: 'Simplification Lever',
-      clearCompleted: 'Clear Completed',
-      mentorRoleLabel: 'Mentor Discipline',
-      roles: {
-        executive: 'Executive Strategy',
-        rhetoric: 'Rhetoric & Oratory',
-        legal: 'Legal & Bar Counsel',
-        exam: 'Certification Strategist',
-      },
-      mentorPlaceholder: 'Ask for a speech critique, legal framework, or strategic breakdown...',
-      mentorSend: 'Send',
-      mentorEmpty: 'Select a mentor discipline above and start a focused multi-turn session.',
+    table: {
+      eyebrow: '05 · All curricula',
+      h2: 'Ten curricula, free to start',
+      lede: 'Plans, progress and the tutor are free within fair daily limits. Hours are the expert baseline before the AI adjusts them.',
+      cols: ['Code', 'Curriculum', 'Track', 'Weeks', 'Hours'],
     },
-    settings: {
-      title: 'Workspace Preferences',
-      subtitle: 'Language register, daily capacity, and cloud synchronization.',
-      languageTitle: 'Interface & Mentor Language',
-      languageDesc: 'Controls all navigation labels, blueprint curricula, and AI mentor responses.',
-      availabilityTitle: 'Daily Execution Profile',
-      dailyHoursLabel: 'Default Study / Practice Hours per Day',
-      startTimeLabel: 'Day Start',
-      endTimeLabel: 'Day End',
-      busyWindowsLabel: 'Recurring Busy Windows (comma-separated)',
-      busyWindowsPlaceholder: 'Mon-Fri 09:00-14:00, Tue/Thu 16:00-17:30',
-      saveProfile: 'Save Preferences',
-      savedConfirmation: 'Preferences saved.',
-      accountTitle: 'Account & Cloud Sync',
-      signedInAs: 'Signed in as',
-      guestMode: 'Local offline-first workspace (sign in with Google to sync across web & mobile)',
-      connectGoogle: 'Sign in with Google',
-      disconnect: 'Sign out',
-      offlineCacheTitle: 'Offline Persistence',
-      offlineCacheDesc: 'Roadmaps, blueprints, and completed steps remain available offline and sync automatically.',
+    faq: {
+      eyebrow: '06 · FAQ',
+      h2: 'Questions people ask first',
+      items: [
+        { q: 'Is IAM AI free?', a: 'Yes, to start. Building a plan, ticking steps and the tutor work on the free plan, within fair daily limits.' },
+        { q: 'Why do I need to sign in with Google?', a: 'Your plans, progress and tutor notes are saved to your account, so they follow you to every device. We use only your Google name, email and photo.' },
+        { q: 'Does the AI write my whole plan?', a: 'No. Subject experts wrote every curriculum. The AI reads your level, deadline and weak areas and adjusts which modules get more, less or no time.' },
+        { q: 'Which exams and goals are covered?', a: 'IELTS Academic, Digital SAT, TOEFL iBT, LSAT, SQE, the Bar (UBE), TOLES, and three speaking tracks: TEDx talks, trial advocacy and policy debate.' },
+        { q: 'Can I use it in Uzbek?', a: 'Yes. The whole interface, the curricula and the tutor’s answers work in Uzbek and English. Switch at any time.' },
+      ],
     },
-    login: {
-      headline: 'Strategic clarity for speech, law, and mastery.',
-      subline: 'Sign in with Google to synchronize roadmaps, daily schedules, and mentor sessions across devices.',
-      googleButton: 'Continue with Google',
-      continuePreview: 'Enter Local Workspace',
-      pillar1: 'Executive Rhetoric',
-      pillar2: 'Academic & Legal Exams',
-      pillar3: 'Time-Blocked Execution',
-    },
-    common: {
-      days: 'days',
-      hours: 'h',
-      minutes: 'min',
-      retry: 'Retry',
-      close: 'Close',
-      offlineBadge: 'Offline · cached view',
+    close: { h2: 'Start with one goal today.', all: 'All goals' },
+    credits: 'Photographs used in the app',
+    footer: '© 2026 IAM AI · English · Oʻzbek',
+  },
+  goals: {
+    title: 'Choose your goal',
+    subtitle: 'Pick one. Your plan is ready in under a minute.',
+    all: 'All',
+    categories: { academic: 'Exams', legal: 'Law', rhetoric: 'Public speaking' } as Record<BlueprintCategory, string>,
+    categoryLead: {
+      academic: 'IELTS · SAT · TOEFL',
+      legal: 'LSAT · SQE · Bar · TOLES',
+      rhetoric: 'TEDx · Courtroom · Debate',
+    } as Record<BlueprintCategory, string>,
+    weeks: 'weeks',
+    hours: 'h',
+    steps: 'steps',
+    start: 'Start',
+  },
+  onboarding: {
+    stepOf: (i: number, n: number) => `Step ${i} of ${n}`,
+    back: 'Back',
+    next: 'Continue',
+    skip: 'Skip',
+    levelQ: 'Where are you now?',
+    levelHint: 'Your current score or level.',
+    targetQ: 'Where do you want to be?',
+    targetHint: 'Your target score or outcome.',
+    timeQ: 'How much time do you have?',
+    focusQ: 'Anything to focus on?',
+    focusHint: 'Optional — weak areas, e.g. “Writing Task 2, time pressure”.',
+    focusPlaceholder: 'Weak areas…',
+    deadline: 'Deadline',
+    daily: 'Per day',
+    custom: 'Or type your own',
+    generate: 'Build my plan',
+    generating: 'Building your plan…',
+    generatingSub: 'Adapting the expert curriculum to you',
+    notFound: 'Goal not found',
+    weeks: 'weeks',
+    hours: 'hours',
+    steps: 'steps',
+    presets: {
+      legal: { current: ['Just starting', 'Studying', 'Retaking'], target: ['Pass', 'Pass with confidence', 'Top score'] },
+      rhetoric: { current: ['Beginner', 'Some experience', 'Confident'], target: ['First real talk', 'Stage-ready', 'Expert level'] },
     },
   },
-  uz: {
-    brand: 'IAM AI',
-    nav: {
-      dashboard: 'Bosh sahifa',
-      rhetoric: 'Notiqlik',
-      certifications: 'Sertifikatlar',
-      assistant: 'Yordamchi',
-      settings: 'Sozlamalar',
-      signIn: 'Kirish',
-      signOut: 'Chiqish',
+  today: {
+    morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening',
+    streak: (n: number) => (n === 1 ? '1 day streak' : `${n} day streak`),
+    noStreak: 'Start your streak today',
+    todayFor: 'Today',
+    minutes: 'min',
+    daysLeft: 'days left',
+    allDone: 'All done for today. Well earned.',
+    openPlan: 'Open plan',
+    ask: 'Ask AI',
+    tasks: 'Your tasks',
+    planDay: 'Plan my day',
+    planDayHint: 'List what you need to do — AI orders it and breaks it into steps.',
+    planDayCta: 'Open assistant',
+    emptyTitle: 'Set your first goal',
+    emptySub: 'IELTS, SAT, LSAT, public speaking and more. Your plan is ready in a minute.',
+    emptyCta: 'Choose a goal',
+    addGoal: 'Add goal',
+    week: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+    progressToday: (d: number, n: number) => `${d} of ${n} today`,
+    keys: 'J/K to move · X to tick · O to ask',
+    newPlan: 'New plan',
+  },
+  login: {
+    back: 'Home',
+    title: 'Sign in to IAM AI',
+    sub: 'One Google account keeps your plans, progress and tutor notes on every device.',
+    google: 'Continue with Google',
+    working: 'Opening Google…',
+    points: ['A plan built around your exam date', 'Today’s steps sized to your hours', 'An AI tutor on every step'],
+    cancelled: 'Sign-in was closed before it finished. Try again.',
+    blocked: 'Your browser blocked the Google window. Allow pop-ups for this site and try again.',
+    failed: 'Google sign-in did not complete. Check your connection and try again.',
+    privacy: 'We use your Google name, email and photo only to keep your account.',
+    photoAlt: 'A quiet library reading room with long desks',
+  },
+  shell: { today: 'Today', goals: 'Goals', assistant: 'Assistant', settings: 'Settings', plans: 'Plans', newPlan: 'New plan', search: 'Search', signOut: 'Sign out', menu: 'Open menu', close: 'Close menu', loading: 'Loading…', offline: 'Offline — changes sync later', noPlans: 'No plans yet' },
+  palette: { placeholder: 'Search pages, plans, actions…', go: 'Go to', plans: 'Roadmaps', actions: 'Actions', lang: 'Switch to Uzbek', empty: 'No results', newPlan: 'New certification plan', newTalk: 'New rhetoric plan' },
+  params: {
+    days: 'd', hrs: 'h', target: 'Target date', capacity: 'Time budget', of: 'of',
+    comfortable: 'Comfortable', intensive: 'Intensive', compressed: 'Compressed — Gemini will prioritise',
+  },
+  theme: {
+    group: 'Theme',
+    names: { system: 'System', light: 'Light', dark: 'Dark' },
+    toggle: { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' },
+    title: 'Theme',
+    desc: 'Dark by default. Pick light, or follow the system.',
+  },
+  languages: { en: 'English (EN)', uz: 'Oʻzbekcha (UZ)' },
+  photos: {
+    academic: 'Rows of wooden seats in a lecture hall',
+    legal: 'A wood-panelled courtroom',
+    rhetoric: 'A theatre stage with a dark curtain',
+    library: 'A quiet library reading room',
+  } as Record<BlueprintCategory | 'library', string>,
+  a11y: {
+    skip: 'Skip to content',
+    workspace: 'Workspace',
+    breadcrumb: 'Breadcrumb',
+    primaryNav: 'Primary',
+    commandPalette: 'Command palette',
+    close: 'Close',
+    assistantMode: 'Assistant mode',
+    mentorRole: 'Mentor role',
+  },
+  errors: {
+    title: 'Something went wrong',
+    reload: 'Reload',
+    unexpected: 'An unexpected error occurred.',
+    sequenceTooShort: 'Enter at least one task or obligation to sequence.',
+    tutorFailed: 'The AI tutor did not answer. Try again.',
+    mentorFailed: 'The mentor did not answer. Try again.',
+    sequenceFailed: 'Could not sequence the tasks. Try again.',
+    signInFailed: 'Could not sign in with Google. Try again.',
+  },
+  mentorPrompts: {
+    executive: ['How should I sequence 3 competing deadlines today?', 'Give me a crisp 5-minute briefing structure.'],
+    rhetoric: ['How do I stop a hostile witness from giving long speeches?', 'Help me craft a zero-preamble 30-second TEDx opening hook.'],
+    legal: ['Contrast warranty, representation, and indemnity for TOLES.', 'How do I pace a 90-minute MPT closed-universe brief?'],
+    exam: ['What separates Band 6.5 from Band 7.5+ in IELTS Task 2?', 'Give me a 2-pass timing system for hard Digital SAT Module 2.'],
+  },
+  meta: {
+    title: 'IAM AI — personal study plans for IELTS, SAT, LSAT and the Bar',
+    description:
+      'Pick a goal — IELTS, SAT, TOEFL, LSAT, SQE, the Bar, TOLES or public speaking — and get a day-by-day plan built around your level, deadline and schedule, with an AI tutor on every step. English and Uzbek.',
+    shareDescription: 'A day-by-day plan for your exam or speaking goal, with an AI tutor on every step.',
+  },
+} as const;
+
+/** Every key in `en` must exist here too: TypeScript stops the build if one is missing. */
+export type Dictionary = Widen<typeof en>;
+
+const uz: Dictionary = {
+  nav: {
+    dashboard: 'Asosiy',
+    rhetoric: 'Notiqlik',
+    certifications: 'Imtihonlar',
+    assistant: 'Yordamchi',
+    settings: 'Sozlamalar',
+    signIn: 'Kirish',
+    signOut: 'Chiqish',
+  },
+  dashboard: {
+    greeting: 'Ish maydoningiz',
+    subtitle: 'Oʻquv rejalaringiz, mashgʻulotlar va kunlik tartibingiz bir joyda.',
+    activeRoadmaps: 'Joriy rejalar',
+    todaySchedule: 'Bugungi tartib',
+    quickCaptureTitle: 'Bugungi ishlarni rejalashtirish',
+    quickCapturePlaceholder: 'Masalan: shartnomani koʻrib chiqish, 45 daqiqa IELTS Writing mashqi, taqdimotga tayyorgarlik...',
+    quickCaptureAction: 'Reja tuzish',
+    metrics: {
+      activePlans: 'Faol rejalar',
+      completionRate: 'Umumiy natija',
+      scheduledHours: 'Ajratilgan vaqt',
+      tasksCompleted: 'Bugun bajarildi',
     },
-    dashboard: {
-      greeting: 'Strategik ish maydoni',
-      subtitle: 'Aniq muddatli yoʻl xaritalari, amaliy mashqlar va kunlik vaqtli reja.',
-      activeRoadmaps: 'Faol yoʻl xaritalari',
-      todaySchedule: 'Bugungi ijro ketma-ketligi',
-      quickCaptureTitle: 'Bugungi vazifalarni tartibga solish',
-      quickCapturePlaceholder: 'Huquqiy xulosa yozish, 45 daqiqa IELTS Writing Task 2, rahbariyat taqdimoti...',
-      quickCaptureAction: 'Reja tuzish',
-      metrics: {
-        activePlans: 'Faol rejalar',
-        completionRate: 'Umumiy bajarilish',
-        scheduledHours: 'Rejalashtirilgan soat',
-        tasksCompleted: 'Bugun bajarildi',
-      },
-      openWorkspace: 'Xaritani ochish',
-      openAssistant: 'Toʻliq yordamchi',
-      newRoadmap: 'Yangi reja',
-      noRoadmaps: 'Hozircha faol yoʻl xaritasi yoʻq. Boshlash uchun notiqlik yoki sertifikat yoʻnalishini tanlang.',
-      noTasks: 'Bugun uchun vaqtga taqsimlangan vazifalar yoʻq. Vazifalarni kiritib reja yarating.',
-      daysLeft: 'kun qoldi',
-      completed: 'bajarildi',
-      syncCloud: 'Bulut bilan sinxron',
-      localWorkspace: 'Lokal kesh faol',
+    openWorkspace: 'Rejani ochish',
+    openAssistant: 'Yordamchiga oʻtish',
+    newRoadmap: 'Yangi reja',
+    noRoadmaps: 'Hozircha faol rejangiz yoʻq. Boshlash uchun notiqlik yoki imtihon yoʻnalishini tanlang.',
+    noTasks: 'Bugun uchun hali hech narsa rejalashtirilmagan. Yuqoriga ishlaringizni yozing, birga tartibga solamiz.',
+    daysLeft: 'kun qoldi',
+    completed: 'bajarildi',
+    syncCloud: 'Sinxronlangan',
+    localWorkspace: 'Shu qurilmada saqlangan',
+  },
+  roadmap: {
+    backToDashboard: 'Asosiy sahifaga',
+    strategyBrief: 'Reja qanday tuzildi',
+    dailySlot: 'Kunlik qulay vaqt',
+    overallProgress: 'Bajarilish',
+    stepsCompleted: 'Bajarilgan qadamlar',
+    allocatedHours: 'Umumiy vaqt',
+    deadline: 'Yakuniy sana',
+    askTutor: 'Mentordan soʻrash',
+    tutorTitle: 'Shu mavzu boʻyicha mentor',
+    tutorSubtitle: 'Aynan shu bosqich va sizning maqsadingiz boʻyicha yordam beradi.',
+    tutorPlaceholder: 'Shu qadam boʻyicha savolingizni yozing...',
+    tutorSend: 'Yuborish',
+    tutorEmpty: 'Biror joyi tushunarsizmi? Qisqa mashq, hayotiy misol yoki koʻp uchraydigan xatolar haqida soʻrang.',
+    tutorPrompt1: 'Shu mavzuni mustahkamlash uchun 10 daqiqalik mashq bering.',
+    tutorPrompt2: 'Odamlar shu yerda eng koʻp qaysi xatoga yoʻl qoʻyadi?',
+    skippedLabel: 'Oʻtkazib yuborilgan',
+    highPriority: 'Juda muhim',
+    normalPriority: 'Asosiy',
+    lowPriority: 'Yengil takrorlash',
+    notFound: 'Bu reja topilmadi.',
+    deleteRoadmap: 'Arxivga olish',
+    cachedNote: 'Saqlangan javob koʻrsatildi',
+    daysLeft: 'kun qoldi',
+    onTrack: 'Jadval boʻyicha ketyapsiz',
+    behind: '{n} qadam ortdasiz',
+    ahead: '{n} qadam oldindasiz',
+    current: 'Navbatdagi',
+    continueNext: 'Davom etish',
+    phaseDone: 'Yakunlandi',
+    confirmArchive: 'Ha, arxivlansin',
+    phases: 'Bosqichlar',
+    minutesShort: 'daq',
+  },
+  assistant: {
+    title: 'Shaxsiy yordamchi',
+    subtitle: 'Tarqoq ishlaringizni aniq kun tartibiga soling yoki mentor bilan maslahatlashing.',
+    tabPlanner: 'Kun tartibi',
+    tabMentor: 'Mentor bilan suhbat',
+    inputLabel: 'Bugun yoki shu hafta nimalar qilishingiz kerak?',
+    inputPlaceholder:
+      'Hammasini bemalol yozavering — masalan: 17:00 gacha shartnomani koʻrib chiqish, 5 daqiqalik nutqqa tayyorlanish, 90 daqiqa test yechish, 18:30 da sportzal...',
+    sequenceAction: 'Tartibga solish',
+    sequencing: 'Kun tartibi tuzilmoqda...',
+    dayBrief: 'Bugungi asosiy maqsad',
+    executionSteps: 'Qanday bajarish kerak',
+    simplification: 'Osonlashtirish yoʻli',
+    clearCompleted: 'Bajarilganlarni oʻchirish',
+    mentorRoleLabel: 'Qaysi yoʻnalishda maslahat kerak?',
+    roles: {
+      executive: 'Ish va vaqt boshqaruvi',
+      rhetoric: 'Notiqlik va debat',
+      legal: 'Huquq va yurisprudensiya',
+      exam: 'Imtihon murabbiyi',
     },
-    rhetoric: {
-      title: 'Notiqlik va sahna mahorati studiyasi',
-      subtitle: 'TEDx maʼruzachilari, sud advokatlari va parlament arboblari uslubidagi tizimli tayyorgarlik.',
-      selectArchetype: 'Notiqlik yoʻnalishini tanlang',
-      configureTitle: 'Dasturni moslashtirish',
-      currentLevelLabel: 'Hozirgi nutq darajangiz',
-      currentLevelPlaceholder: 'Masalan: Ishchi uchrashuvlarda erkinman, rasmiy savol-javobda shoshilaman',
-      targetGoalLabel: 'Kutilayotgan natija',
-      targetGoalPlaceholder: 'Masalan: 12 daqiqalik asosiy maʼruza va bosiq savol-javob nazorati',
-      deadlineLabel: 'Maqsad muddati (kun)',
-      dailyHoursLabel: 'Kunlik mashq vaqti (soat)',
-      focusLabel: 'Zaif nuqtalar yoki tadbir konteksti',
-      focusPlaceholder: 'Masalan: Qarshi soʻroq nazorati, strategik pauzalar, kuchli ochilish',
-      generateAction: 'Shaxsiy yoʻl xaritasini yaratish',
-      generating: 'Dastur moslashtirilmoqda...',
-      phasesCount: 'bosqich',
-      hoursEstimate: 'soat baza',
+    mentorPlaceholder: 'Nutqingizni tahlil qildiring, huquqiy savol bering yoki maslahat soʻrang...',
+    mentorSend: 'Yuborish',
+    mentorEmpty: 'Yuqoridan kerakli mutaxassisni tanlang va suhbatni boshlang.',
+  },
+  settings: {
+    eyebrow: 'EN / UZ · Akkauntingizga sinxronlanadi',
+    title: 'Sozlamalar',
+    subtitle: 'Til, boʻsh vaqtingiz va hisob sozlamalari.',
+    languageTitle: 'Ilova va mentor tili',
+    languageDesc: 'Menyular, oʻquv rejalari va mentor javoblari shu tilda boʻladi.',
+    availabilityTitle: 'Kunlik vaqt tartibingiz',
+    dailyHoursLabel: 'Kunlik oʻqish yoki mashq soati',
+    startTimeLabel: 'Kun boshlanishi',
+    endTimeLabel: 'Kun yakuni',
+    busyWindowsLabel: 'Band vaqtlaringiz (vergul bilan)',
+    busyWindowsPlaceholder: 'Du-Ju 09:00-14:00, Se/Pa 16:00-17:30',
+    saveProfile: 'Saqlash',
+    savedConfirmation: 'Saqlandi.',
+    accountTitle: 'Hisob va sinxronizatsiya',
+    signedInAs: 'Kirilgan hisob',
+    guestMode: 'Maʼlumotlaringiz faqat shu qurilmada saqlanmoqda. Boshqa qurilmalarda ham koʻrish uchun Google orqali kiring.',
+    connectGoogle: 'Google orqali kirish',
+    disconnect: 'Chiqish',
+    offlineCacheTitle: 'Internetsiz ham ishlaydi',
+    offlineCacheDesc: 'Rejalaringiz va natijalaringiz internetsiz ham saqlanib turadi, tarmoqqa ulanganda esa oʻzi yangilanadi.',
+  },
+  common: {
+    dateLocale: 'uz-UZ',
+    member: 'Foydalanuvchi',
+    days: 'kun',
+    hours: 'soat',
+    minutes: 'daq',
+    retry: 'Qayta urinish',
+    close: 'Yopish',
+    offlineBadge: 'Oflayn · saqlangan versiya',
+  },
+  landing: {
+    nav: { method: 'Uslub', rail: 'Dasturlar', slip: 'Rejangiz', phases: 'Bosqichlar', faq: 'Savollar' },
+    skip: 'Asosiy qismga oʻtish',
+    signIn: 'Kirish',
+    start: 'Maqsadingizni tanlang',
+    continue: 'Bugunni ochish',
+    lang: 'Switch to English',
+    hero: {
+      kicker: 'Rejali oʻqish.',
+      brand: 'IAM AI',
+      sub: 'IELTS, SAT, LSAT, advokatura yoki notiqlik. Ekspert dasturi muddatingizga qarab kunma-kun sanalanadi.',
+      meta: ['10 ta dastur', '150 qadam', 'Oʻzbek · Ingliz', 'Boshlash bepul'],
+      scroll: 'Pastga',
     },
-    certifications: {
-      title: 'Sertifikat va yuridik imtihon mentori',
-      subtitle: 'Xalqaro akademik testlar va yurisprudensiya imtihonlari uchun aniq muddatli tizim.',
-      filterAll: 'Barcha yoʻnalishlar',
-      filterAcademic: 'Akademik',
-      filterLegal: 'Huquq va advokatura',
-      academicLabel: 'Akademik',
-      legalLabel: 'Huquqiy',
-      currentScoreLabel: 'Hozirgi ball / daraja',
-      currentScorePlaceholder: 'Masalan: Band 6.0 (Writing 5.5, Speaking 6.0)',
-      targetScoreLabel: 'Maqsad ball / malaka',
-      targetScorePlaceholder: 'Masalan: Band 7.5+ umumiy',
-      deadlineLabel: 'Imtihongacha qolgan kun',
-      dailyHoursLabel: 'Kunlik tayyorgarlik soati',
-      weakAreasLabel: 'Zaif boʻlimlar va band vaqtlar',
-      weakAreasPlaceholder: 'Masalan: Writing bogʻliqligi, vaqt nazorati, faqat kechki soatlar',
-      generateAction: 'Sertifikat rejasini moslashtirish',
-      generating: 'Oʻquv reja sozlanmoqda...',
-      selectedBlueprint: 'Tanlangan dastur',
+    manifesto: {
+      eyebrow: '01 · Uslub',
+      line: 'Mutaxassis yozadi. Kod sanalaydi. AI faqat moslaydi.',
     },
-    roadmap: {
-      backToDashboard: 'Bosh sahifa',
-      strategyBrief: 'Moslashtirish strategiyasi',
-      dailySlot: 'Tavsiya etilgan kunlik oyna',
-      overallProgress: 'Umumiy taraqqiyot',
-      stepsCompleted: 'Bajarilgan qadamlar',
-      allocatedHours: 'Ajratilgan soat',
-      deadline: 'Yakuniy sana',
-      askTutor: 'AI Mentordan soʻrash',
-      tutorTitle: 'Bosqichli AI Mentor',
-      tutorSubtitle: 'Faqat joriy modul va sizning maqsadingiz doirasida ishlaydi.',
-      tutorPlaceholder: 'Ushbu qadam boʻyicha amaliy savol bering...',
-      tutorSend: 'Yuborish',
-      tutorEmpty: 'Ushbu modul metodikasi, mashqlari yoki tipik xatolar boʻyicha aniq savol bering.',
-      tutorPrompt1: 'Ushbu qadam uchun 10 daqiqalik aniq mashq bering.',
-      tutorPrompt2: 'Nomzodlar bu yerda qaysi xatoni eng koʻp qiladi?',
-      skippedLabel: 'Qisqartirilgan / oʻtkazilgan',
-      highPriority: 'Yuqori ustuvorlik',
-      normalPriority: 'Asosiy yoʻnalish',
-      lowPriority: 'Qisqa takrorlash',
-      notFound: 'Yoʻl xaritasi topilmadi.',
-      deleteRoadmap: 'Rejani arxivlash',
-      cachedNote: 'Kanonik javob keshdan tez yuklandi',
-      daysLeft: 'kun qoldi',
-      onTrack: 'Reja boʻyicha',
-      behind: '{n} qadam ortda',
-      ahead: '{n} qadam oldinda',
-      current: 'Joriy',
-      continueNext: 'Davom etish',
-      phaseDone: 'Yakunlandi',
-      confirmArchive: 'Arxivlashni tasdiqlang',
-      phases: 'Bosqichlar',
-      minutesShort: 'daq',
+    rail: {
+      eyebrow: '02 · Dasturlar',
+      h2: 'Oʻnta dasturdan oltitasi',
+      hint: 'Qatorni koʻrish uchun pastga suring',
+      names: { 'ielts-academic': 'IELTS Academic', 'sat-digital': 'Digital SAT', 'toefl-ibt': 'TOEFL iBT', lsat: 'LSAT', sqe: 'SQE 1 va 2', 'tedx-oratory': 'TEDx nutqi' },
+      track: { academic: 'Imtihon', legal: 'Huquq', rhetoric: 'Notiqlik' },
+      weeks: (n: number) => `${n} hafta`,
+      hours: (n: number) => `${n} soat`,
     },
-    assistant: {
-      title: 'Shaxsiy ijro yordamchisi',
-      subtitle: 'Kunlik vazifalarni vaqt bloklariga ajrating yoki koʻp bosqichli Strategik Mentor bilan suhbatlashing.',
-      tabPlanner: 'Vazifa tartiblovchi',
-      tabMentor: 'Strategik Mentor suhbati',
-      inputLabel: 'Kunlik yoki haftalik majburiyatlar',
-      inputPlaceholder:
-        'Vazifa, uchrashuv va oʻquv rejalaringizni yozing (masalan: 17:00 gacha shartnoma tahlili, 5 daqiqalik nutq tayyorlash, 90 daqiqa LSAT mantiqiy boʻlimi)...',
-      sequenceAction: 'Tartiblash va soddalashtirish',
-      sequencing: 'Kun tartibi tuzilmoqda...',
-      dayBrief: 'Ijro xulosasi',
-      executionSteps: 'Bajarish bosqichlari',
-      simplification: 'Soddalashtirish usuli',
-      clearCompleted: 'Bajarilganlarni tozalash',
-      mentorRoleLabel: 'Mentor ixtisosligi',
-      roles: {
-        executive: 'Ijro strategiyasi',
-        rhetoric: 'Notiqlik va debat',
-        legal: 'Huquqiy tahlil va Bar',
-        exam: 'Sertifikat strategiyasi',
-      },
-      mentorPlaceholder: 'Nutq tahlili, huquqiy tuzilma yoki kunlik strategiya soʻrang...',
-      mentorSend: 'Yuborish',
-      mentorEmpty: 'Yuqoridan mentor yoʻnalishini tanlab, koʻp bosqichli maslahat sessiyasini boshlang.',
+    slip: {
+      eyebrow: '03 · Rejangiz',
+      h2: 'Oʻzi chop etiladigan reja',
+      lede: 'Toʻrt javob — bitta sanali reja. AI faqat darajangiz talab qilgan joyni oʻzgartiradi, qolgani mutaxassislar yozgandek qoladi.',
+      cues: ['Maqsad tanlandi', 'Daraja oʻqildi', 'Tuzatma qoʻllandi', 'Kunlar sanalandi'],
+      status: [
+        'Maqsad oʻqilmoqda · IELTS Academic',
+        'Daraja 6.0 → maqsad 7.5 · zaif joy: Writing',
+        'Tuzatma · +3 Writing moduli · −1 Listening',
+        'Reja tayyor · bugungi roʻyxat ajratildi',
+      ],
+      head: 'IAM AI · Namuna reja',
+      name: 'IELTS 7.5',
+      rows: ['Reja raqami', 'AI tuzatmasi', 'Sanalar'],
+      lot: 'IA-0412',
+      pending: 'kutilmoqda',
+      delta: '+3 Writing / −1 Listening',
+      dates: '06 yan → 18 mar · 72 kun',
+      stub: 'Bugun · 3 qadam · 85 daq',
     },
-    settings: {
-      title: 'Tizim sozlamalari',
-      subtitle: 'Til uslubi, kunlik vaqt byudjeti va bulut sinxronizatsiyasi.',
-      languageTitle: 'Interfeys va mentor tili',
-      languageDesc: 'Barcha menyular, dastur bosqichlari va AI mentor javoblarini boshqaradi.',
-      availabilityTitle: 'Kunlik ish profili',
-      dailyHoursLabel: 'Kunlik standart oʻqish / mashq soati',
-      startTimeLabel: 'Kun boshlanishi',
-      endTimeLabel: 'Kun yakuni',
-      busyWindowsLabel: 'Band vaqt oraligʻi (vergul bilan ajrating)',
-      busyWindowsPlaceholder: 'Du-Ju 09:00-14:00, Se/Pa 16:00-17:30',
-      saveProfile: 'Sozlamalarni saqlash',
-      savedConfirmation: 'Sozlamalar saqlandi.',
-      accountTitle: 'Hisob va bulut sinxronizatsiyasi',
-      signedInAs: 'Kirilgan hisob',
-      guestMode: 'Lokal oflayn-birinchi rejim (barcha qurilmalarda sinxronlash uchun Google bilan kiring)',
-      connectGoogle: 'Google orqali kirish',
-      disconnect: 'Hisobdan chiqish',
-      offlineCacheTitle: 'Oflayn barqarorlik',
-      offlineCacheDesc: 'Yoʻl xaritalari, dasturlar va bajarilgan qadamlar internetsiz ham saqlanadi va qayta ulanishda sinxronlanadi.',
+    phases: {
+      eyebrow: '04 · Bosqichlar',
+      h2: 'Har bir reja uch bosqichda',
+      chapters: [
+        { l: '1-bosqich', t: 'Oʻlchash', d: 'Diagnostika, format qoidalari va eng foydali mashqlar — darajangizga mos.' },
+        { l: '2-bosqich', t: 'Qurish', d: 'Vaqtli boʻlimlar va zaif deb belgilagan joylaringizga aniq mashqlar.' },
+        { l: '3-bosqich', t: 'Sinov', d: 'Imtihon vaqtida toʻliq sinovlar, keyin boʻshliqlarni yopuvchi xatolar jurnali.' },
+      ],
     },
-    login: {
-      headline: 'Nutq, huquq va yuksak mahorat uchun strategik aniqlik.',
-      subline: 'Yoʻl xaritalari, kunlik reja va mentor suhbatlarini sinxronlash uchun Google hisobingiz bilan kiring.',
-      googleButton: 'Google orqali davom etish',
-      continuePreview: 'Lokal ish maydoniga kirish',
-      pillar1: 'Ijro notiqligi',
-      pillar2: 'Akademik va huquqiy imtihonlar',
-      pillar3: 'Vaqtli ijro tizimi',
+    table: {
+      eyebrow: '05 · Barcha dasturlar',
+      h2: 'Oʻnta dastur, boshlash bepul',
+      lede: 'Reja, natijalar va ustoz kunlik adolatli limitlar bilan bepul. Soatlar — AI moslashidan oldingi ekspert bazasi.',
+      cols: ['Kod', 'Dastur', 'Yoʻnalish', 'Hafta', 'Soat'],
     },
-    common: {
-      days: 'kun',
-      hours: 'soat',
-      minutes: 'daq',
-      retry: 'Qayta urinish',
-      close: 'Yopish',
-      offlineBadge: 'Oflayn · keshlangan holat',
+    faq: {
+      eyebrow: '06 · Savollar',
+      h2: 'Odamlar birinchi soʻraydigan savollar',
+      items: [
+        { q: 'IAM AI bepulmi?', a: 'Ha, boshlash bepul. Reja tuzish, qadamlarni belgilash va ustoz bepul tarifda kunlik adolatli limitlar bilan ishlaydi.' },
+        { q: 'Nega Google orqali kirish kerak?', a: 'Rejalaringiz, natijalaringiz va ustoz izohlari akkauntingizda saqlanadi va har bir qurilmada siz bilan boʻladi. Faqat Google ismingiz, emailingiz va rasmingiz ishlatiladi.' },
+        { q: 'Butun rejani AI yozadimi?', a: 'Yoʻq. Har bir dasturni mutaxassislar yozgan. AI darajangiz, muddatingiz va zaif tomonlaringizni oʻqib, qaysi modulga koʻproq, kamroq yoki umuman vaqt ajratmaslikni belgilaydi.' },
+        { q: 'Qaysi imtihon va maqsadlar bor?', a: 'IELTS Academic, Digital SAT, TOEFL iBT, LSAT, SQE, advokatura (UBE), TOLES va uchta notiqlik yoʻnalishi: TEDx, sud notiqligi va siyosiy munozara.' },
+        { q: 'Oʻzbek tilida ishlatsa boʻladimi?', a: 'Ha. Butun interfeys, dasturlar va ustoz javoblari oʻzbek va ingliz tillarida ishlaydi. Istalgan payt almashtirish mumkin.' },
+      ],
     },
+    close: { h2: 'Bugun bitta maqsaddan boshlang.', all: 'Barcha maqsadlar' },
+    credits: 'Ilovadagi fotosuratlar',
+    footer: '© 2026 IAM AI · Ingliz · Oʻzbek',
+  },
+  goals: {
+    title: 'Maqsadingizni tanlang',
+    subtitle: 'Bittasini tanlang — rejangiz bir daqiqada tayyor.',
+    all: 'Barchasi',
+    categories: { academic: 'Imtihonlar', legal: 'Huquq', rhetoric: 'Notiqlik' } as Record<BlueprintCategory, string>,
+    categoryLead: {
+      academic: 'IELTS · SAT · TOEFL',
+      legal: 'LSAT · SQE · Bar · TOLES',
+      rhetoric: 'TEDx · Sud · Munozara',
+    } as Record<BlueprintCategory, string>,
+    weeks: 'hafta',
+    hours: 'soat',
+    steps: 'qadam',
+    start: 'Boshlash',
+  },
+  onboarding: {
+    stepOf: (i: number, n: number) => `${n} tadan ${i}-qadam`,
+    back: 'Orqaga',
+    next: 'Davom etish',
+    skip: 'Oʻtkazib yuborish',
+    levelQ: 'Hozir qaysi darajadasiz?',
+    levelHint: 'Hozirgi ballingiz yoki darajangiz.',
+    targetQ: 'Qaysi natijaga erishmoqchisiz?',
+    targetHint: 'Maqsadli ball yoki natija.',
+    timeQ: 'Qancha vaqtingiz bor?',
+    focusQ: 'Nimaga koʻproq eʼtibor beraylik?',
+    focusHint: 'Ixtiyoriy — zaif tomonlar, masalan “Writing Task 2, vaqt yetishmasligi”.',
+    focusPlaceholder: 'Zaif tomonlar…',
+    deadline: 'Muddat',
+    daily: 'Kuniga',
+    custom: 'Yoki oʻzingiz yozing',
+    generate: 'Rejamni tuzish',
+    generating: 'Rejangiz tuzilmoqda…',
+    generatingSub: 'Ekspert dasturi sizga moslashtirilmoqda',
+    notFound: 'Maqsad topilmadi',
+    weeks: 'hafta',
+    hours: 'soat',
+    steps: 'qadam',
+    presets: {
+      legal: { current: ['Endi boshlayapman', 'Oʻqiyapman', 'Qayta topshiraman'], target: ['Topshirish', 'Ishonchli topshirish', 'Yuqori ball'] },
+      rhetoric: { current: ['Boshlovchi', 'Biroz tajriba bor', 'Ishonchli'], target: ['Birinchi jiddiy nutq', 'Sahnaga tayyor', 'Ekspert daraja'] },
+    },
+  },
+  today: {
+    morning: 'Xayrli tong', afternoon: 'Xayrli kun', evening: 'Xayrli kech',
+    streak: (n: number) => `${n} kun ketma-ket`,
+    noStreak: 'Bugun ketma-ketlikni boshlang',
+    todayFor: 'Bugun',
+    minutes: 'daq',
+    daysLeft: 'kun qoldi',
+    allDone: 'Bugungi reja bajarildi. Barakalla!',
+    openPlan: 'Rejani ochish',
+    ask: 'AI dan soʻrash',
+    tasks: 'Vazifalaringiz',
+    planDay: 'Kunimni rejalashtir',
+    planDayHint: 'Qiladigan ishlaringizni yozing — AI tartiblab, qadamlarga ajratadi.',
+    planDayCta: 'Yordamchini ochish',
+    emptyTitle: 'Birinchi maqsadingizni qoʻying',
+    emptySub: 'IELTS, SAT, LSAT, notiqlik va boshqalar. Rejangiz bir daqiqada tayyor.',
+    emptyCta: 'Maqsad tanlash',
+    addGoal: 'Maqsad qoʻshish',
+    week: ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'],
+    progressToday: (d: number, n: number) => `bugun ${n} tadan ${d}`,
+    keys: 'J/K — yurish · X — belgilash · O — soʻrash',
+    newPlan: 'Yangi reja',
+  },
+  login: {
+    back: 'Bosh sahifa',
+    title: 'IAM AI’ga kirish',
+    sub: 'Bitta Google akkaunti rejalaringiz, natijalaringiz va ustoz izohlarini barcha qurilmalarda saqlaydi.',
+    google: 'Google orqali davom etish',
+    working: 'Google ochilmoqda…',
+    points: ['Imtihon sanangizga moslangan reja', 'Vaqtingizga sigʻadigan bugungi qadamlar', 'Har bir qadamda AI ustoz'],
+    cancelled: 'Kirish oynasi yakunlanmasdan yopildi. Qayta urinib koʻring.',
+    blocked: 'Brauzer Google oynasini toʻsib qoʻydi. Ushbu sayt uchun qalqib chiquvchi oynalarga ruxsat bering.',
+    failed: 'Google orqali kirish yakunlanmadi. Internet aloqasini tekshirib, qayta urinib koʻring.',
+    privacy: 'Google ismingiz, emailingiz va rasmingiz faqat akkauntingizni yuritish uchun ishlatiladi.',
+    photoAlt: 'Uzun stollari bor sokin kutubxona oʻqish zali',
+  },
+  shell: { today: 'Bugun', goals: 'Maqsadlar', assistant: 'Yordamchi', settings: 'Sozlamalar', plans: 'Rejalar', newPlan: 'Yangi reja', search: 'Qidirish', signOut: 'Chiqish', menu: 'Menyuni ochish', close: 'Menyuni yopish', loading: 'Yuklanmoqda…', offline: 'Oflayn — oʻzgarishlar keyin sinxronlanadi', noPlans: 'Hozircha reja yoʻq' },
+  palette: { placeholder: 'Sahifa, reja yoki amalni qidiring…', go: 'Oʻtish', plans: 'Yoʻl xaritalari', actions: 'Amallar', lang: 'Ingliz tiliga oʻtish', empty: 'Hech narsa topilmadi', newPlan: 'Yangi sertifikat rejasi', newTalk: 'Yangi notiqlik rejasi' },
+  params: {
+    days: 'kun', hrs: 'soat', target: 'Maqsad sanasi', capacity: 'Vaqt hajmi', of: '/',
+    comfortable: 'Bemalol', intensive: 'Jadal', compressed: 'Siqilgan — Gemini ustuvorlarini tanlaydi',
+  },
+  theme: {
+    group: 'Mavzu',
+    names: { system: 'Tizim', light: 'Oq', dark: 'Qora' },
+    toggle: { system: 'Mavzu: tizimga qarab', light: 'Mavzu: oq', dark: 'Mavzu: qora' },
+    title: 'Mavzu',
+    desc: 'Odatda qora. Oq mavzuni tanlang yoki tizimga qarab qoldiring.',
+  },
+  languages: { en: 'English (EN)', uz: 'Oʻzbekcha (UZ)' },
+  photos: {
+    academic: 'Auditoriyadagi yogʻoch oʻrindiqlar qatori',
+    legal: 'Yogʻoch bilan qoplangan sud zali',
+    rhetoric: 'Qora pardali teatr sahnasi',
+    library: 'Sokin kutubxona oʻqish zali',
+  },
+  a11y: {
+    skip: 'Asosiy qismga oʻtish',
+    workspace: 'Ish maydoni',
+    breadcrumb: 'Joylashuv',
+    primaryNav: 'Asosiy menyu',
+    commandPalette: 'Buyruqlar oynasi',
+    close: 'Yopish',
+    assistantMode: 'Yordamchi rejimi',
+    mentorRole: 'Mentor roli',
+  },
+  errors: {
+    title: 'Nimadir xato ketdi',
+    reload: 'Qayta yuklash',
+    unexpected: 'Kutilmagan xatolik yuz berdi.',
+    sequenceTooShort: 'Kamida bitta vazifa yoki majburiyat kiriting.',
+    tutorFailed: 'AI ustoz javob bermadi. Qayta urinib koʻring.',
+    mentorFailed: 'Mentor javob bermadi. Qayta urinib koʻring.',
+    sequenceFailed: 'Vazifalarni tartiblab boʻlmadi. Qayta urinib koʻring.',
+    signInFailed: 'Google orqali kirib boʻlmadi. Qayta urinib koʻring.',
+  },
+  mentorPrompts: {
+    executive: ['Bugungi 3 ta eng muhim ustuvorligimni qanday ajratay?', '5 daqiqalik brifing tuzilmasini bering.'],
+    rhetoric: ['TEDx nutqim uchun ilk 30 soniyalik kuchli ilgak tuzib bering.', 'Qarshi soʻroqda chalgʻituvchi guvohni qanday toʻxtataman?'],
+    legal: ['Bar Exam MEE uchun 30 daqiqalik IRAC qolipini tushuntiring.', 'TOLES shartnomasida indemnity va warranty farqi nimada?'],
+    exam: ['IELTS Writing Task 2 da Band 6.5 dan 7.5 ga chiqish kaliti nima?', 'Digital SAT 2-modulda vaqtni qanday boshqaray?'],
+  },
+  meta: {
+    title: 'IAM AI — IELTS, SAT, LSAT va advokatura uchun shaxsiy oʻquv rejalari',
+    description:
+      'Maqsad tanlang — IELTS, SAT, TOEFL, LSAT, SQE, advokatura, TOLES yoki notiqlik — va darajangiz, muddatingiz va jadvalingizga mos kunma-kun reja oling. Har bir qadamda AI ustoz. Oʻzbek va ingliz tillarida.',
+    shareDescription: 'Imtihon yoki notiqlik maqsadingiz uchun kunma-kun reja, har bir qadamda AI ustoz bilan.',
   },
 };
+
+export const DICTIONARIES: Record<Locale, Dictionary> = { en, uz };
 
 export function getDictionary(locale: Locale): Dictionary {
   return DICTIONARIES[locale] ?? DICTIONARIES.en;

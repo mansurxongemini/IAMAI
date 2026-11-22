@@ -8,35 +8,7 @@ import { ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { useWorkspace } from '@/components/WorkspaceProvider';
 import { BrandLockup } from '@/components/BrandMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
-
-const COPY = {
-  en: {
-    back: 'Home',
-    title: 'Sign in to IAM AI',
-    sub: 'One Google account keeps your plans, progress and tutor notes on every device.',
-    google: 'Continue with Google',
-    working: 'Opening Google…',
-    points: ['A plan built around your exam date', 'Today’s steps sized to your hours', 'An AI tutor on every step'],
-    cancelled: 'Sign-in was closed before it finished. Try again.',
-    blocked: 'Your browser blocked the Google window. Allow pop-ups for this site and try again.',
-    failed: 'Google sign-in did not complete. Check your connection and try again.',
-    privacy: 'We use your Google name, email and photo only to keep your account.',
-    photoAlt: 'A quiet library reading room with long desks',
-  },
-  uz: {
-    back: 'Bosh sahifa',
-    title: 'IAM AI’ga kirish',
-    sub: 'Bitta Google akkaunti rejalaringiz, natijalaringiz va ustoz izohlarini barcha qurilmalarda saqlaydi.',
-    google: 'Google orqali davom etish',
-    working: 'Google ochilmoqda…',
-    points: ['Imtihon sanangizga moslangan reja', 'Vaqtingizga sigʻadigan bugungi qadamlar', 'Har bir qadamda AI ustoz'],
-    cancelled: 'Kirish oynasi yakunlanmasdan yopildi. Qayta urinib koʻring.',
-    blocked: 'Brauzer Google oynasini toʻsib qoʻydi. Ushbu sayt uchun qalqib chiquvchi oynalarga ruxsat bering.',
-    failed: 'Google orqali kirish yakunlanmadi. Internet aloqasini tekshirib, qayta urinib koʻring.',
-    privacy: 'Google ismingiz, emailingiz va rasmingiz faqat akkauntingizni yuritish uchun ishlatiladi.',
-    photoAlt: 'Uzun stollari bor sokin kutubxona oʻqish zali',
-  },
-} as const;
+import { getDictionary } from '@core/i18n';
 
 function GoogleG() {
   return (
@@ -52,7 +24,7 @@ function GoogleG() {
 export default function LoginPage() {
   const router = useRouter();
   const { locale, setLocale, signIn, user } = useWorkspace();
-  const c = COPY[locale];
+  const c = getDictionary(locale).login;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +74,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => setLocale(locale === 'en' ? 'uz' : 'en')}
               className="h-11 min-w-11 px-3 rounded-none text-[13px] font-medium text-ink-2 hover:text-ink hover:bg-surface/70 transition-colors cursor-pointer"
-              aria-label={locale === 'en' ? 'Oʻzbek tiliga oʻtish' : 'Switch to English'}
+              aria-label={getDictionary(locale).landing.lang}
             >
               {locale === 'en' ? 'UZ' : 'EN'}
             </button>

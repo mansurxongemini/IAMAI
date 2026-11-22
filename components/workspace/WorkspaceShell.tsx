@@ -16,11 +16,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { BrandMark, Wordmark } from '@/components/BrandMark';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
-
-export const WS_COPY = {
-  en: { today: 'Today', goals: 'Goals', assistant: 'Assistant', settings: 'Settings', plans: 'Plans', newPlan: 'New plan', search: 'Search', signOut: 'Sign out', menu: 'Open menu', close: 'Close menu', loading: 'Loading…', offline: 'Offline — changes sync later', noPlans: 'No plans yet' },
-  uz: { today: 'Bugun', goals: 'Maqsadlar', assistant: 'Yordamchi', settings: 'Sozlamalar', plans: 'Rejalar', newPlan: 'Yangi reja', search: 'Qidirish', signOut: 'Chiqish', menu: 'Menyuni ochish', close: 'Menyuni yopish', loading: 'Yuklanmoqda…', offline: 'Oflayn — oʻzgarishlar keyin sinxronlanadi', noPlans: 'Hozircha reja yoʻq' },
-} as const;
+import { getDictionary } from '@core/i18n';
 
 function Ring({ value }: { value: number }) {
   const r = 6;
@@ -54,7 +50,7 @@ function NavItem({ href, icon: Icon, label, active, kbd, onNavigate }: { href: s
 function Sidebar({ onNavigate, onSearch }: { onNavigate?: () => void; onSearch: () => void }) {
   const pathname = usePathname();
   const { locale, roadmaps, user, signOut } = useWorkspace();
-  const c = WS_COPY[locale];
+  const c = getDictionary(locale).shell;
   const active = roadmaps.filter((r) => r.status !== 'archived');
 
   return (
@@ -76,7 +72,7 @@ function Sidebar({ onNavigate, onSearch }: { onNavigate?: () => void; onSearch: 
         </button>
       </div>
 
-      <nav aria-label="Workspace" className="mt-3 px-2 space-y-0.5">
+      <nav aria-label={getDictionary(locale).a11y.workspace} className="mt-3 px-2 space-y-0.5">
         <NavItem href="/today" icon={Sun} label={c.today} active={pathname.startsWith('/today')} kbd="G T" onNavigate={onNavigate} />
         <NavItem href="/goals" icon={Compass} label={c.goals} active={pathname.startsWith('/goals')} kbd="G G" onNavigate={onNavigate} />
         <NavItem href="/assistant" icon={ListChecks} label={c.assistant} active={pathname.startsWith('/assistant')} kbd="G A" onNavigate={onNavigate} />
@@ -140,7 +136,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, authReady, isOnline, locale } = useWorkspace();
-  const c = WS_COPY[locale];
+  const d = getDictionary(locale);
+  const c = d.shell;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [drawer, setDrawer] = useState(false);
 
@@ -193,7 +190,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[248px_1fr]">
-      <a href="#main" className="skip-link">{locale === 'uz' ? 'Asosiy qismga oʻtish' : 'Skip to content'}</a>
+      <a href="#main" className="skip-link">{d.a11y.skip}</a>
 
       {/* Desktop sidebar */}
       <aside className="hidden lg:block sticky top-0 h-dvh border-r border-ink/[0.07] bg-canvas-2/60">

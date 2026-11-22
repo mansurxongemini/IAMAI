@@ -10,15 +10,16 @@ import { useWorkspace } from '@/components/WorkspaceProvider';
 import { cn } from '@/lib/utils';
 import { AppShell } from '@/components/AppShell';
 import { Topbar } from '@/components/workspace/Topbar';
-import { goalsCopy } from './copy';
 import { TRACK_PHOTO } from './photos';
+import { getDictionary } from '@core/i18n';
 
 export const CATEGORY_ICON: Record<BlueprintCategory, LucideIcon> = { academic: GraduationCap, legal: Scale, rhetoric: Mic };
 const ORDER: BlueprintCategory[] = ['academic', 'legal', 'rhetoric'];
 
 export function GoalCatalog() {
   const { locale } = useWorkspace();
-  const c = goalsCopy(locale);
+  const d = getDictionary(locale);
+  const c = d.goals;
   const router = useRouter();
   const params = useSearchParams();
   const raw = params.get('c');
@@ -66,7 +67,7 @@ export function GoalCatalog() {
         return (
           <section key={cat} className="space-y-3">
             <div className="relative h-36 sm:h-44 overflow-hidden rounded-3xl">
-              <Image src={TRACK_PHOTO[cat].src} alt={TRACK_PHOTO[cat].alt[locale]} fill sizes="(min-width: 1200px) 1180px, 100vw" className="object-cover" />
+              <Image src={TRACK_PHOTO[cat].src} alt={d.photos[cat]} fill sizes="(min-width: 1200px) 1180px, 100vw" className="object-cover" />
               <span className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/30 to-transparent" aria-hidden="true" />
               <div className="absolute inset-0 flex items-end p-5 sm:p-6">
                 <div className="flex items-center gap-3 text-white">

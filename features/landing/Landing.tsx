@@ -17,10 +17,19 @@ import { CATALOG } from '@core/catalog';
 import { useWorkspace } from '@/components/WorkspaceProvider';
 import credits from '@/public/photos/credits.json';
 import { ContourCanvas, PlateCanvas, SoilCanvas, type PlateKind } from './canvases';
-import { RAIL, landingCopy } from './copy';
+import { getDictionary } from '@core/i18n';
 import './landing.css';
 
 const BY_ID = Object.fromEntries(CATALOG.map((e) => [e.id, e]));
+/** Six curricula on the rail and the plate each one gets; names come from i18n `landing.rail.names`. */
+const RAIL: { id: string; plate: PlateKind }[] = [
+  { id: 'ielts-academic', plate: 'rings' },
+  { id: 'sat-digital', plate: 'grid' },
+  { id: 'toefl-ibt', plate: 'waves' },
+  { id: 'lsat', plate: 'stems' },
+  { id: 'sqe', plate: 'blocks' },
+  { id: 'tedx-oratory', plate: 'arcs' },
+];
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 const d = (ms: number) => ({ ['--d' as string]: `${Math.round(ms)}ms` }) as CSSProperties;
@@ -104,7 +113,8 @@ function TypedLockup({ kicker, brand, instant }: { kicker: string; brand: string
 
 export function Landing() {
   const { locale, setLocale, hydrated, user } = useWorkspace();
-  const c = landingCopy(locale);
+  const dict = getDictionary(locale);
+  const c = dict.landing;
   const signedIn = hydrated && Boolean(user);
   const goTo = (path: string) => (signedIn ? path : `/login?next=${encodeURIComponent(path)}`);
   const reduced = useReducedMotion();
@@ -239,7 +249,7 @@ export function Landing() {
           <Link href="/" className="kw-word" aria-label="IAM AI" data-rev style={d(0)}>
             IAM <b>AI</b>
           </Link>
-          <nav aria-label="Primary" className="kw-nav__links kw-mono">
+          <nav aria-label={dict.a11y.primaryNav} className="kw-nav__links kw-mono">
             {navLinks.map(([href, label], i) => (
               <a key={href} href={href} data-rev style={d(60 + i * 60)}>{label}</a>
             ))}
@@ -314,9 +324,9 @@ export function Landing() {
                   if (!e) return null;
                   return (
                     <Link key={r.id} href={goTo(`/goals/${r.id}`)} className="kw-card" data-rev style={d(i * 70)}>
-                      <PlateCanvas kind={r.plate as PlateKind} seed={i + 3} className="kw-card__plate" />
+                      <PlateCanvas kind={r.plate} seed={i + 3} className="kw-card__plate" />
                       <span className="kw-card__code kw-mono" data-rev style={d(i * 70 + 120)}>{e.code}</span>
-                      <span className="kw-card__t" data-rev style={d(i * 70 + 180)}>{r.name[locale]}</span>
+                      <span className="kw-card__t" data-rev style={d(i * 70 + 180)}>{c.rail.names[r.id]}</span>
                       <span className="kw-card__meta kw-mono" data-rev style={d(i * 70 + 240)}>
                         <span className="kw-dim">{c.rail.track[e.category]} · {c.rail.weeks(e.recommendedWeeks)}</span>
                         <span className="kw-card__price" data-rev style={d(i * 70 + 300)}>{c.rail.hours(e.baselineTotalHours)}</span>
@@ -476,7 +486,7 @@ export function Landing() {
               </span>
             ))}
           </p>
-          <p className="kw-foot__line kw-mono kw-dim" data-rev style={d(280)}>© 2026 IAM AI · English · Oʻzbek</p>
+          <p className="kw-foot__line kw-mono kw-dim" data-rev style={d(280)}>{c.footer}</p>
         </div>
       </footer>
     </div>

@@ -202,7 +202,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     const initialProfile: UserProfile = {
       uid: user.uid,
-      displayName: user.displayName || profile.displayName || 'Executive Member',
+      displayName: user.displayName || profile.displayName || getDictionary(profile.locale).common.member,
       email: user.email || 'member@iam-ai.workspace',
       photoURL: user.photoURL || undefined,
       locale: profile.locale,
@@ -473,7 +473,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           })),
         });
       if (!resOk) {
-        throw new Error(data.error || 'Failed to get AI Tutor response.');
+        throw new Error(data.error || getDictionary(profile.locale).errors.tutorFailed);
       }
 
       const assistantMsg: NodeChatMessage = {
@@ -526,7 +526,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           history: existing.slice(-10).map((m) => ({ role: m.role, content: m.content })),
         });
       if (!resOk) {
-        throw new Error(data.error || 'Executive Mentor request failed.');
+        throw new Error(data.error || getDictionary(profile.locale).errors.mentorFailed);
       }
 
       const replyMsg: NodeChatMessage = {
