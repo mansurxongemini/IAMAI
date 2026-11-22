@@ -101,9 +101,18 @@ export async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+/**
+ * The AI model could not answer (no key, network, timeout, overload, unusable output). The client
+ * shows its own localized "connection to the AI model was lost" message for this code; there is no
+ * substitute answer.
+ */
+export function aiUnavailable(): NextResponse {
+  return NextResponse.json({ error: 'AI model unavailable.', code: 'ai_unavailable' }, { status: 503 });
+}
+
 /** Never leak internal error text (keys, stack, upstream messages) to clients. */
 export function serverError(route: RouteName, error: unknown): NextResponse {
   if (error instanceof ClientError) return NextResponse.json({ error: error.message }, { status: error.status });
   console.error(`[api:${route}]`, error);
-  return NextResponse.json({ error: 'AI service is temporarily unavailable. Please try again.' }, { status: 503 });
+  return aiUnavailable();
 }

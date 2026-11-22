@@ -14,7 +14,7 @@ import type {
 } from '@core/schemas';
 import { DEFAULT_USER_PROFILE } from '@core/defaults';
 import { loadCloud } from '@/lib/cloud';
-import { apiPost } from '@/lib/api-client';
+import { apiErrorText, apiPost } from '@/lib/api-client';
 import { recordCompletion } from '@/features/today/activity';
 
 const STORAGE_KEYS = {
@@ -256,46 +256,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }
         return updated;
       });
-
-      void import('@core/seed').then(({ createSeedRoadmaps, createSeedTasks }) => {
-      const localizedSeeds = createSeedRoadmaps(user?.uid ?? 'local-executive', next);
-      const seedRoadmapMap = new Map(localizedSeeds.map((r) => [r.id, r]));
-      setRoadmaps((prev) =>
-        prev.map((rm) => {
-          const fresh = seedRoadmapMap.get(rm.id);
-          if (!fresh) return rm;
-          return {
-            ...rm,
-            locale: next,
-            currentLevel: fresh.currentLevel,
-            targetGoal: fresh.targetGoal,
-            strategySummary: fresh.strategySummary,
-            dailySlotRecommendation: fresh.dailySlotRecommendation,
-            phases: rm.phases.map((phase, pIdx) => ({
-              ...phase,
-              modules: phase.modules.map((mod, mIdx) => ({
-                ...mod,
-                customFocus: fresh.phases[pIdx]?.modules[mIdx]?.customFocus ?? mod.customFocus,
-              })),
-            })),
-          };
-        })
-      );
-
-      const localizedSeedTasks = createSeedTasks(user?.uid ?? 'local-executive', next);
-      const seedTaskMap = new Map(localizedSeedTasks.map((t) => [t.id, t]));
-      setTasks((prev) =>
-        prev.map((task) => {
-          const fresh = seedTaskMap.get(task.id);
-          if (!fresh) return task;
-          return {
-            ...fresh,
-            completed: task.completed,
-            updatedAt: task.updatedAt,
-          };
-        })
-      );
-      });
     },
     [user]
   );
@@ -473,7 +433,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           })),
         });
       if (!resOk) {
-        throw new Error(data.error || getDictionary(profile.locale).errors.tutorFailed);
+        const e = getDictionary(profile.locale).errors;
+        throw new Error(apiErrorText(data, e.aiUnavailable, e.tutorFailed));
       }
 
       const assistantMsg: NodeChatMessage = {
@@ -526,7 +487,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           history: existing.slice(-10).map((m) => ({ role: m.role, content: m.content })),
         });
       if (!resOk) {
-        throw new Error(data.error || getDictionary(profile.locale).errors.mentorFailed);
+        const e = getDictionary(profile.locale).errors;
+        throw new Error(apiErrorText(data, e.aiUnavailable, e.mentorFailed));
       }
 
       const replyMsg: NodeChatMessage = {

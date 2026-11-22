@@ -88,7 +88,7 @@ test('compact outline strips full step drill text for token optimization', () =>
   assert.ok(advocacy);
   const compact = getCompactBlueprintOutline(advocacy);
   assert.equal(compact.id, 'legal-advocacy');
-  assert.equal(compact.modules.length, 6);
+  assert.equal(compact.modules.length, advocacy.phases.flatMap((p) => p.modules).length);
   const serializedCompact = JSON.stringify(compact);
   const serializedFull = JSON.stringify(advocacy);
   assert.ok(

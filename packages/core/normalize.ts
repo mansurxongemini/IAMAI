@@ -65,6 +65,7 @@ export function normalizeDeltaPatch(raw: unknown, blueprint: Blueprint): GeminiD
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
   const modules = new Map(blueprint.phases.flatMap((p) => p.modules).map((m) => [m.id, m]));
+  const firstId = blueprint.phases[0]?.modules[0]?.id;
   const seen = new Set<string>();
   const adjustments = (Array.isArray(r.moduleAdjustments) ? r.moduleAdjustments : [])
     .map((a) => (a && typeof a === 'object' ? (a as Record<string, unknown>) : null))
@@ -74,7 +75,9 @@ export function normalizeDeltaPatch(raw: unknown, blueprint: Blueprint): GeminiD
       const mod = modules.get(id);
       if (!mod || seen.has(id)) return [];
       seen.add(id);
-      const priority = normalizeModulePriority(a.priority) ?? 'normal';
+      // The first module of every blueprint holds the baseline test or recording; it is shortened, never dropped.
+      const asked = normalizeModulePriority(a.priority) ?? 'normal';
+      const priority = asked === 'skip' && id === firstId ? 'low' : asked;
       const hours = priority === 'skip' ? 0 : Math.max(0, num(a.allocatedHours));
       return [{ moduleId: id, priority, allocatedHours: Number(hours.toFixed(1)), customFocus: str(a.customFocus, 400) || mod.keyFramework }];
     });

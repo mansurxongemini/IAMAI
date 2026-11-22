@@ -1165,7 +1165,7 @@ export const RHETORIC_BLUEPRINTS: Blueprint[] = [
       uz: 'Munozarachi va siyosat maʼruzachisi',
     },
     recommendedWeeks: 8,
-    baselineTotalHours: 50,
+    baselineTotalHours: 52,
     examVersion: 'World Schools debate format (WSDC Rules, Aug 2026) + legislative floor debate (US Senate rules)',
     lastVerified: '2026-11-22',
     sources: [

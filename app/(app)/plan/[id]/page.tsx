@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Archive, ArrowLeft, ArrowRight, Check, ChevronDown, MessageSquare } from 'lucide-react';
 import { assessFeasibility, computeRoadmapProgress } from '@core/scheduler';
 import { stepDueDates } from '@core/today';
@@ -32,7 +32,6 @@ export default function RoadmapWorkspacePage() {
   const listRef = useRef<HTMLElement>(null);
   useListKeys(listRef);
   // Set by onboarding when the AI was unavailable and the expert baseline was used.
-  const fallback = useSearchParams().get('fallback') === '1';
   const [confirmArchive, setConfirmArchive] = useState(false);
 
   // Deep link from Today: /plan/:id?ask=<stepId> opens the tutor on that step.
@@ -199,9 +198,6 @@ export default function RoadmapWorkspacePage() {
               </div>
               <h1 className="font-editorial text-4xl sm:text-5xl font-medium tracking-tight text-ink">{rm.title[locale]}</h1>
               <p className="text-sm text-muted leading-relaxed max-w-2xl">{rm.strategySummary}</p>
-              {fallback && (
-                <p role="status" className="text-[13px] leading-relaxed max-w-2xl rounded-2xl bg-ink/[0.04] px-4 py-3 text-ink-2">{dict.roadmap.fallbackNotice}</p>
-              )}
               {feasibility.status === 'tight' && (
                 <p className="text-[13px] leading-relaxed max-w-2xl rounded-2xl bg-warn/10 px-4 py-3 text-warn">
                   {dict.roadmap.feasibilityTight(feasibility.budgetHours, feasibility.baselineHours, feasibility.suggestedDailyHours)}

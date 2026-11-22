@@ -10,7 +10,7 @@ import { PlanParams } from '@/components/PlanParams';
 import { useWorkspace } from '@/components/WorkspaceProvider';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
-import { apiPost } from '@/lib/api-client';
+import { apiErrorText, apiPost } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { AppShell } from '@/components/AppShell';
 import { Topbar } from '@/components/workspace/Topbar';
@@ -93,11 +93,11 @@ export function OnboardingWizard({ goalId }: { goalId: string }) {
         weakAreas: focus.trim() || undefined,
         startDate: localDay(),
       });
-      if (!ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Error');
+      if (!ok) throw new Error(apiErrorText(data, d.errors.aiUnavailable, d.errors.unexpected));
       await addRoadmap(data.roadmap);
-      router.push(`/plan/${data.roadmap.id}${data.adapted === false ? '?fallback=1' : ''}`);
+      router.push(`/plan/${data.roadmap.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error');
+      setError(err instanceof Error ? err.message : d.errors.unexpected);
       setBusy(false);
     }
   }

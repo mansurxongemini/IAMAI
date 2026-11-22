@@ -1,5 +1,10 @@
 import 'server-only';
+import net from 'node:net';
 import { GoogleGenAI, Type, type Content } from '@google/genai';
+
+// Node tries each resolved address for only 250 ms before giving up ("fetch failed"). On a slow
+// link the connection to Google takes seconds, so a working key looked broken. Give it time.
+net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
 
 export const FAST_STRUCTURED_MODEL = process.env.GEMINI_FAST_MODEL || 'gemini-3.1-flash-lite';
 export const GENERAL_MENTOR_MODEL = process.env.GEMINI_MENTOR_MODEL || 'gemini-4-hydrogen';
